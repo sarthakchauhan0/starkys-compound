@@ -1,53 +1,43 @@
 'use client'
 
-import { useRef, useEffect, useCallback } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useRef, useEffect } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { useSphere } from '@react-three/cannon'
-import { PointerLockControls } from '@react-three/drei'
 import * as THREE from 'three'
 import usePlayerControls from '@/hooks/usePlayerControls'
-import { useAudioEffects } from '@/hooks/useAudioEffects'
 
-const SPEED = 6
-const JUMP_FORCE = 5
+const SPEED = 8
+const JUMP_FORCE = 8
 
-export default function Player({ onShoot, onHit, setPlayerPosition }) {
-  const { playShootSound, playHitSound } = useAudioEffects()
+export default function Player({ setPlayerPosition }) {
   const keys = usePlayerControls()
-  const { camera, scene } = useThree()
-  const controlsRef = useRef()
   const canJump = useRef(true)
-  const raycaster = useRef(new THREE.Raycaster())
-  const isFiring = useRef(false)
-
-  // Physics body – sphere for smooth collisions
+  
+  // Physics body – sphere allows smooth rolling/sliding over terrain
   const [ref, api] = useSphere(() => ({
-    mass: 75,
+    mass: 50,
     type: 'Dynamic',
-    position: [0, 2, 15],
-    args: [0.5],
+    position: [0, 5, 15],
+    args: [0.6], // Slightly larger than before to encompass the cat model
     material: { friction: 0.1, restitution: 0 },
     linearDamping: 0.9,
-    fixedRotation: true,
+    angularDamping: 1.0, // Prevent the sphere from spinning wildly
+    fixedRotation: true, // Crucial! Keeps the visual mesh right-side up
     onCollide: (e) => {
       // Reset jump when landing
-      if (e.contact && e.contact.ni[1] > 0.5) {
+      if (e.contact && Math.abs(e.contact.ni[1]) > 0.5) {
         canJump.current = true
       }
     },
   }))
 
-  // Track velocity for jump detection
   const velocity = useRef([0, 0, 0])
   useEffect(() => {
-    const unsubscribe = api.velocity.subscribe((v) => {
-      velocity.current = v
-    })
+    const unsubscribe = api.velocity.subscribe((v) => { velocity.current = v })
     return unsubscribe
   }, [api.velocity])
 
-  // Track position for syncing camera
-  const position = useRef([0, 2, 15])
+  const position = useRef([0, 5, 15])
   useEffect(() => {
     const unsubscribe = api.position.subscribe((p) => {
       position.current = p
@@ -56,87 +46,115 @@ export default function Player({ onShoot, onHit, setPlayerPosition }) {
     return unsubscribe
   }, [api.position, setPlayerPosition])
 
-  // Fire raycast on click
-  const handleShoot = useCallback(() => {
-    if (isFiring.current) return
-    isFiring.current = true
-    setTimeout(() => { isFiring.current = false }, 150)
+  const catMeshRef = useRef()
 
-    playShootSound()
-    if (onShoot) onShoot()
+  // Camera setup
+  const cameraPosition = new THREE.Vector3()
+  const cameraTarget = new THREE.Vector3()
 
-    raycaster.current.setFromCamera(new THREE.Vector2(0, 0), camera)
-    const intersects = raycaster.current.intersectObjects(scene.children, true)
+  useFrame((state, delta) => {
+    // 1. Calculate Movement relative to world space
+    // Since it's an isometric/3rd person platformer, WASD can just map to world axes
+    const moveX = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0)
+    const moveZ = (keys.current.backward ? 1 : 0) - (keys.current.forward ? 1 : 0)
 
-    for (const intersect of intersects) {
-      let obj = intersect.object
-      // Walk up the hierarchy to find a target
-      while (obj) {
-        if (obj.userData && obj.userData.targetId) {
-          playHitSound()
-          if (onHit) onHit(obj.userData.targetId, obj.userData.targetType)
-          return
-        }
-        obj = obj.parent
-      }
-    }
-  }, [camera, scene, onShoot, onHit])
+    const direction = new THREE.Vector3(moveX, 0, moveZ).normalize().multiplyScalar(SPEED)
 
-  // Mouse click listener for shooting
-  useEffect(() => {
-    const handleClick = () => {
-      if (document.pointerLockElement) {
-        handleShoot()
-      }
-    }
-    document.addEventListener('click', handleClick)
-    return () => document.removeEventListener('click', handleClick)
-  }, [handleShoot])
-
-  // Movement each frame
-  useFrame(() => {
-    // Sync camera to physics body
-    camera.position.set(
-      position.current[0],
-      position.current[1] + 0.5, // eye height
-      position.current[2]
-    )
-
-    // Calculate movement direction based on camera heading
-    const direction = new THREE.Vector3()
-    const frontVector = new THREE.Vector3(
-      0,
-      0,
-      (keys.current.backward ? 1 : 0) - (keys.current.forward ? 1 : 0)
-    )
-    const sideVector = new THREE.Vector3(
-      (keys.current.left ? 1 : 0) - (keys.current.right ? 1 : 0),
-      0,
-      0
-    )
-
-    direction
-      .subVectors(frontVector, sideVector)
-      .normalize()
-      .multiplyScalar(SPEED)
-      .applyEuler(camera.rotation)
-
+    // Apply movement
     api.velocity.set(direction.x, velocity.current[1], direction.z)
 
-    // Jump
+    // 2. Jump
     if (keys.current.jump && canJump.current) {
       api.velocity.set(velocity.current[0], JUMP_FORCE, velocity.current[2])
       canJump.current = false
     }
+
+    // 3. Rotate the Cat mesh to face movement direction
+    if (catMeshRef.current && (moveX !== 0 || moveZ !== 0)) {
+      // Calculate target angle
+      const targetAngle = Math.atan2(direction.x, direction.z)
+      
+      // Smooth rotation (slerp equivalent for eulery Y)
+      let currentAngle = catMeshRef.current.rotation.y
+      
+      // Normalize angle difference to take shortest path
+      let diff = targetAngle - currentAngle
+      while (diff < -Math.PI) diff += Math.PI * 2
+      while (diff > Math.PI) diff -= Math.PI * 2
+
+      catMeshRef.current.rotation.y += diff * 10 * delta
+    }
+
+    // 4. Update Third-Person Camera
+    // Follow target is the player's position
+    cameraTarget.set(position.current[0], position.current[1] + 1, position.current[2])
+
+    // Desired camera position (behind and above)
+    // You can tweak these offsets to change the perspective
+    const offset = new THREE.Vector3(0, 6, 12) 
+    const desiredPos = cameraTarget.clone().add(offset)
+
+    // Smoothly interpolate camera position
+    cameraPosition.lerp(desiredPos, 5 * delta)
+    state.camera.position.copy(cameraPosition)
+    
+    // Look at player
+    state.camera.lookAt(cameraTarget)
   })
 
   return (
-    <>
-      {/* Invisible physics body */}
-      <mesh ref={ref} visible={false}>
-        <sphereGeometry args={[0.5]} />
-      </mesh>
-      <PointerLockControls ref={controlsRef} />
-    </>
+    <mesh ref={ref}>
+      <sphereGeometry args={[0.6]} />
+      {/* 
+        The top level mesh receives physics positions.
+        We make it invisible and render the cat relative to this root.
+      */}
+      <meshBasicMaterial visible={false} />
+
+      {/* Visual Cat Group */}
+      <group ref={catMeshRef} position={[0, -0.6, 0]}>
+        {/* Body */}
+        <mesh position={[0, 0.4, 0]} castShadow>
+          <boxGeometry args={[0.5, 0.4, 0.8]} />
+          <meshToonMaterial color="#e6a46e" />
+        </mesh>
+        
+        {/* Head */}
+        <mesh position={[0, 0.8, 0.4]} castShadow>
+          <boxGeometry args={[0.5, 0.4, 0.5]} />
+          <meshToonMaterial color="#e6a46e" />
+        </mesh>
+
+        {/* Ears */}
+        <mesh position={[-0.2, 1.1, 0.4]} castShadow>
+          <coneGeometry args={[0.1, 0.3, 4]} />
+          <meshToonMaterial color="#e6a46e" />
+        </mesh>
+        <mesh position={[0.2, 1.1, 0.4]} castShadow>
+          <coneGeometry args={[0.1, 0.3, 4]} />
+          <meshToonMaterial color="#e6a46e" />
+        </mesh>
+
+        {/* Tail */}
+        <mesh position={[0, 0.6, -0.4]} rotation={[0.5, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.05, 0.05, 0.6]} />
+          <meshToonMaterial color="#d18a4f" />
+        </mesh>
+
+        {/* Eyes & Nose (Details) */}
+        <mesh position={[-0.1, 0.85, 0.66]}>
+          <boxGeometry args={[0.05, 0.05, 0.02]} />
+          <meshBasicMaterial color="#2c3e50" />
+        </mesh>
+        <mesh position={[0.1, 0.85, 0.66]}>
+          <boxGeometry args={[0.05, 0.05, 0.02]} />
+          <meshBasicMaterial color="#2c3e50" />
+        </mesh>
+        <mesh position={[0, 0.75, 0.66]}>
+          <boxGeometry args={[0.03, 0.03, 0.02]} />
+          <meshBasicMaterial color="#ff7b7b" />
+        </mesh>
+      </group>
+    </mesh>
   )
 }

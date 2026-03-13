@@ -36,77 +36,74 @@ export default function PortfolioUI({ projectData, targetType, onClose }) {
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60"
+        className="absolute inset-0 bg-[#fffdf2]/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
 
       {/* Modal Card */}
       <div
-        className={`relative max-w-lg w-full mx-6 rounded-xl overflow-hidden border transition-transform duration-500 ${
+        className={`relative max-w-lg w-full mx-6 rounded-3xl overflow-hidden glass transition-transform duration-500 ${
           visible ? 'scale-100' : 'scale-95'
         }`}
         style={{
-          background: 'linear-gradient(135deg, rgba(10,10,26,0.95), rgba(26,26,46,0.95))',
-          borderColor: projectData.color || '#00ffcc',
-          boxShadow: `0 0 40px ${projectData.color || '#00ffcc'}22, inset 0 1px 0 rgba(255,255,255,0.05)`,
+          borderColor: projectData.color || '#87ceeb',
+          boxShadow: `0 10px 40px ${projectData.color || '#87ceeb'}33`,
         }}
       >
         {/* Header accent line */}
         <div
-          className="h-1 w-full"
-          style={{ background: `linear-gradient(90deg, transparent, ${projectData.color || '#00ffcc'}, transparent)` }}
+          className="h-2 w-full"
+          style={{ background: `linear-gradient(90deg, transparent, ${projectData.color || '#87ceeb'}, transparent)` }}
         />
 
         <div className="p-8">
           {/* Type badge */}
           <div className="flex items-center gap-3 mb-4">
             <div
-              className="px-2.5 py-0.5 rounded text-[10px] tracking-[0.2em] uppercase font-mono font-bold"
+              className="px-3 py-1 rounded-full text-xs font-bold tracking-[0.1em] shadow-sm bg-white/60"
               style={{
-                color: projectData.color || '#00ffcc',
-                background: `${projectData.color || '#00ffcc'}15`,
-                border: `1px solid ${projectData.color || '#00ffcc'}40`,
+                color: projectData.color || '#4ba3e3',
+                border: `1px solid ${projectData.color || '#4ba3e3'}40`,
               }}
             >
-              {isSkill ? '⊞ SKILL PROFILE' : isFragment ? '◈ DATA FILE' : '▸ PROJECT FILE'}
+              {isSkill ? '✿ SKILL PROFILE' : isFragment ? '◈ DISCOVERY' : '▸ MEMORY'}
             </div>
-            <div className="flex-1 h-px bg-gray-700" />
-            <span className="text-[10px] text-gray-500 font-mono">ID:{projectData.id}</span>
+            <div className="flex-1 h-px bg-[#2c3e50]/10" />
+            <span className="text-xs text-[#5a6c7d] font-bold tracking-widest">NO.{projectData.id}</span>
           </div>
 
           {/* Title */}
           <h2
-            className="text-2xl font-bold mb-3"
-            style={{ color: projectData.color || '#00ffcc' }}
+            className="text-3xl font-extrabold mb-3"
+            style={{ color: projectData.color || '#4ba3e3' }}
           >
             {projectData.title || projectData.name}
           </h2>
 
           {/* Description */}
-          <p className="text-gray-300 text-sm leading-relaxed mb-6">
+          <p className="text-[#2c3e50] text-[15px] font-medium leading-relaxed mb-6">
             {projectData.description || `Proficiency in ${projectData.name} with ${projectData.years} years of experience.`}
           </p>
 
           {/* Skill XP Bar */}
           {isSkill && (
-            <div className="mb-6">
-              <div className="flex justify-between text-xs mb-2">
-                <span className="text-gray-400 font-mono">XP LEVEL</span>
-                <span style={{ color: projectData.color }} className="font-mono font-bold">
+            <div className="mb-6 p-4 rounded-2xl bg-white/50 border border-white/60 shadow-sm">
+              <div className="flex justify-between text-sm mb-3 font-bold">
+                <span className="text-[#5a6c7d] tracking-widest uppercase">Mastery</span>
+                <span style={{ color: projectData.color }}>
                   {projectData.xp}%
                 </span>
               </div>
-              <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+              <div className="w-full h-4 bg-black/10 rounded-full overflow-hidden border border-white/40">
                 <div
-                  className="h-full rounded-full transition-all duration-1000"
+                  className="h-full rounded-full transition-all duration-1000 shadow-sm"
                   style={{
                     width: `${projectData.xp}%`,
                     background: `linear-gradient(90deg, ${projectData.color}88, ${projectData.color})`,
-                    boxShadow: `0 0 10px ${projectData.color}44`,
                   }}
                 />
               </div>
-              <p className="text-gray-500 text-xs mt-2 font-mono">
+              <p className="text-[#7f8c8d] text-xs mt-3 font-bold tracking-widest uppercase text-center">
                 {projectData.years} YEARS EXPERIENCE
               </p>
             </div>
@@ -115,17 +112,13 @@ export default function PortfolioUI({ projectData, targetType, onClose }) {
           {/* Data insights */}
           {isFragment && projectData.insights && (
             <div
-              className="p-4 rounded-lg mb-6 border"
-              style={{
-                borderColor: `${projectData.color}30`,
-                background: `${projectData.color}08`,
-              }}
+              className="p-5 rounded-2xl mb-6 shadow-sm border border-white/60 bg-white/50"
             >
-              <p className="text-[10px] text-gray-400 tracking-[0.2em] uppercase font-mono mb-2">
+              <p className="text-[12px] text-[#5a6c7d] tracking-[0.2em] font-bold uppercase mb-2">
                 KEY INSIGHT
               </p>
-              <p style={{ color: projectData.color }} className="text-sm font-mono">
-                &gt; {projectData.insights}
+              <p className="text-[#2c3e50] text-[15px] font-medium italic">
+                "{projectData.insights}"
               </p>
             </div>
           )}
@@ -133,14 +126,14 @@ export default function PortfolioUI({ projectData, targetType, onClose }) {
           {/* Tech stack */}
           {projectData.techStack && (
             <div className="mb-6">
-              <p className="text-[10px] text-gray-400 tracking-[0.2em] uppercase font-mono mb-2">
+              <p className="text-[12px] text-[#5a6c7d] tracking-[0.2em] font-bold uppercase mb-3">
                 TECH STACK
               </p>
               <div className="flex flex-wrap gap-2">
                 {projectData.techStack.map((tech) => (
                   <span
                     key={tech}
-                    className="px-2.5 py-1 rounded text-xs font-mono border border-gray-700 text-gray-300 bg-gray-800/50"
+                    className="px-3 py-1.5 rounded-full text-xs font-bold border border-white/60 text-[#2c3e50] bg-white/60 shadow-sm"
                   >
                     {tech}
                   </span>
@@ -150,20 +143,18 @@ export default function PortfolioUI({ projectData, targetType, onClose }) {
           )}
 
           {/* Links */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-4 mt-8">
             {projectData.liveUrl && (
               <a
                 href={projectData.liveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 px-4 py-2.5 rounded-lg text-center text-sm font-mono font-bold transition-all duration-200 hover:brightness-125 pointer-events-auto"
+                className="flex-1 px-6 py-3 rounded-full text-center text-sm font-bold shadow-md transition-all duration-200 hover:scale-105 pointer-events-auto text-white"
                 style={{
-                  background: `${projectData.color || '#00ffcc'}20`,
-                  color: projectData.color || '#00ffcc',
-                  border: `1px solid ${projectData.color || '#00ffcc'}50`,
+                  background: projectData.color || '#4ba3e3',
                 }}
               >
-                ▸ LIVE LINK
+                ▸ VISIT LIVE
               </a>
             )}
             {projectData.githubUrl && (
@@ -171,20 +162,20 @@ export default function PortfolioUI({ projectData, targetType, onClose }) {
                 href={projectData.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 px-4 py-2.5 rounded-lg text-center text-sm font-mono font-bold border border-gray-600 text-gray-300 hover:border-gray-400 transition-all duration-200 pointer-events-auto"
+                className="flex-1 px-6 py-3 rounded-full text-center text-sm font-bold border border-[#5a6c7d]/30 text-[#2c3e50] bg-white/40 hover:bg-white/80 transition-all duration-200 pointer-events-auto shadow-sm"
               >
-                ⓘ GITHUB
+                ⓘ VIEW SOURCE
               </a>
             )}
           </div>
         </div>
 
         {/* Close button */}
-        <div className="px-8 py-4 border-t border-gray-800 flex justify-between items-center">
-          <span className="text-[10px] text-gray-600 font-mono">PRESS ESC TO CLOSE</span>
+        <div className="px-8 py-5 border-t border-white/40 flex justify-between items-center bg-white/30">
+          <span className="text-[11px] text-[#5a6c7d] font-bold tracking-widest">PRESS ESC TO CLOSE</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded text-xs font-mono text-gray-400 border border-gray-700 hover:border-gray-500 hover:text-gray-200 transition-all pointer-events-auto"
+            className="px-5 py-2 rounded-full text-xs font-bold text-[#5a6c7d] bg-white/50 border border-white/60 hover:bg-white hover:text-[#2c3e50] shadow-sm transition-all pointer-events-auto"
           >
             ✕ CLOSE
           </button>

@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
-  --foreground: #ededed;
+  --background: #fffdf2;
+  --foreground: #2c3e50;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-quicksand);
 }
 
 * {
@@ -22,9 +22,11 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #000;
-  color: #ededed;
-  font-family: var(--font-geist-mono), 'Courier New', monospace;
+  background: #fffdf2;
+  color: #2c3e50;
+  font-family: var(--font-quicksand), 'Nunito', sans-serif;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -54,12 +56,13 @@ canvas {
   -webkit-user-select: none;
 }
 
-/* Glassmorphism utility */
+/* Glassmorphism utility - bright/clean version */
 .glass {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: rgba(10, 10, 26, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 /* Neon glow utility */

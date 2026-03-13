@@ -28,69 +28,69 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
           className={`transition-transform duration-100 ${crosshairPulse ? 'scale-125' : 'scale-100'}`}
         >
           {/* Outer segments */}
-          <line x1="20" y1="2" x2="20" y2="12" stroke="#00ffcc" strokeWidth="1.5" opacity="0.8" />
-          <line x1="20" y1="28" x2="20" y2="38" stroke="#00ffcc" strokeWidth="1.5" opacity="0.8" />
-          <line x1="2" y1="20" x2="12" y2="20" stroke="#00ffcc" strokeWidth="1.5" opacity="0.8" />
-          <line x1="28" y1="20" x2="38" y2="20" stroke="#00ffcc" strokeWidth="1.5" opacity="0.8" />
+          <line x1="20" y1="4" x2="20" y2="10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" filter="drop-shadow(0px 0px 2px rgba(0,0,0,0.3))" />
+          <line x1="20" y1="30" x2="20" y2="36" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" filter="drop-shadow(0px 0px 2px rgba(0,0,0,0.3))" />
+          <line x1="4" y1="20" x2="10" y2="20" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" filter="drop-shadow(0px 0px 2px rgba(0,0,0,0.3))" />
+          <line x1="30" y1="20" x2="36" y2="20" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" opacity="0.9" filter="drop-shadow(0px 0px 2px rgba(0,0,0,0.3))" />
           {/* Center dot */}
-          <circle cx="20" cy="20" r="1.5" fill={crosshairPulse ? '#ff4444' : '#00ffcc'} />
+          <circle cx="20" cy="20" r="2.5" fill={crosshairPulse ? '#ff9a9a' : '#fff'} filter="drop-shadow(0px 0px 3px rgba(0,0,0,0.4))" />
         </svg>
       </div>
 
       {/* ===== TOP LEFT: Zone Indicator ===== */}
-      <div className="absolute top-6 left-6 flex items-center gap-3">
-        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-        <span className="text-green-400 text-xs tracking-[0.3em] uppercase font-mono opacity-80">
-          {currentZone || 'THE COMPOUND'}
+      <div className="absolute top-8 left-8 flex items-center gap-4 glass px-5 py-3 rounded-2xl shadow-sm border border-white/60">
+        <div className="w-3 h-3 rounded-full bg-[#a8e6cf] animate-pulse shadow-[0_0_8px_rgba(168,230,207,0.8)]" />
+        <span className="text-[#2c3e50] text-sm tracking-[0.1em] font-bold">
+          {currentZone || 'THE GARDEN'}
         </span>
       </div>
 
       {/* ===== TOP RIGHT: Mini Compass ===== */}
-      <div className="absolute top-6 right-6">
-        <div className="border border-cyan-500/30 rounded px-3 py-1.5 backdrop-blur-sm bg-black/20">
-          <span className="text-cyan-400 text-[10px] tracking-[0.2em] font-mono">
+      <div className="absolute top-8 right-8">
+        <div className="glass rounded-2xl px-5 py-3 border border-white/60 shadow-sm">
+          <span className="text-[#2c3e50] text-sm tracking-[0.1em] font-bold">
             PORTFOLIO // STARKY
           </span>
         </div>
       </div>
 
       {/* ===== BOTTOM LEFT: Energy Bar ===== */}
-      <div className="absolute bottom-8 left-8">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[10px] text-cyan-400/60 tracking-[0.2em] font-mono uppercase">
-            Energy
+      <div className="absolute bottom-10 left-10 glass p-5 rounded-2xl border border-white/60 shadow-md">
+        <div className="flex flex-col gap-2">
+          <span className="text-xs text-[#5a6c7d] tracking-[0.1em] font-bold uppercase">
+            Stamina
           </span>
-          <div className="w-44 h-1.5 bg-gray-800/60 rounded-full overflow-hidden border border-cyan-500/20">
+          <div className="w-48 h-2.5 bg-black/10 rounded-full overflow-hidden border border-white/40">
             <div
-              className="h-full bg-gradient-to-r from-cyan-400 to-green-400 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-[#a8e6cf] to-[#dcedc1] rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(168,230,207,0.5)]"
               style={{ width: '100%' }}
             />
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            <span className="text-[10px] text-green-400/80 font-mono">OPTIMAL</span>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-2 h-2 rounded-full bg-[#87ceeb]" />
+            <span className="text-xs text-[#2c3e50] font-bold">FEELING GOOD</span>
           </div>
         </div>
       </div>
 
       {/* ===== BOTTOM RIGHT: Ammo / Project Counter ===== */}
-      <div className="absolute bottom-8 right-8 text-right">
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-[10px] text-amber-400/60 tracking-[0.2em] font-mono uppercase">
-            Projects Scanned
+      <div className="absolute bottom-10 right-10 text-right glass p-5 rounded-2xl border border-white/60 shadow-md">
+        <div className="flex flex-col items-end gap-2">
+          <span className="text-xs text-[#5a6c7d] tracking-[0.1em] font-bold uppercase">
+            Discoveries
           </span>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-amber-400 font-mono tabular-nums">
+            <span className="text-4xl font-extrabold text-[#ffb7b2]">
               {String(scannedCount).padStart(2, '0')}
             </span>
-            <span className="text-sm text-amber-400/40 font-mono">/</span>
-            <span className="text-sm text-amber-400/40 font-mono">
+            <span className="text-lg text-[#5a6c7d] px-1">/</span>
+            <span className="text-lg text-[#5a6c7d]">
               {String(totalCount).padStart(2, '0')}
             </span>
           </div>
-          <div className="w-32 h-0.5 bg-gray-800/60 rounded-full overflow-hidden">
+          <div className="w-36 h-1.5 bg-black/10 rounded-full overflow-hidden mt-1">
             <div
-              className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-700"
+              className="h-full bg-gradient-to-r from-[#ffb7b2] to-[#ffdac1] rounded-full transition-all duration-700 shadow-[0_0_8px_rgba(255,183,178,0.6)]"
               style={{ width: `${totalCount > 0 ? (scannedCount / totalCount) * 100 : 0}%` }}
             />
           </div>
@@ -98,9 +98,9 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
       </div>
 
       {/* ===== BOTTOM CENTER: Quick Controls Hint ===== */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-        <span className="text-[9px] text-white/20 font-mono tracking-widest">
-          WASD MOVE &nbsp;•&nbsp; CLICK SCAN &nbsp;•&nbsp; ESC MENU
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass px-6 py-2 rounded-full border border-white/60 shadow-sm">
+        <span className="text-[11px] text-[#2c3e50] font-bold tracking-widest">
+          WASD MOVE &nbsp;•&nbsp; CLICK INTERACT &nbsp;•&nbsp; ESC MENU
         </span>
       </div>
     </div>

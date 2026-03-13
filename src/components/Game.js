@@ -3,114 +3,55 @@
 import { useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Physics } from '@react-three/cannon'
+import { Environment } from '@react-three/drei'
+import { EffectComposer, Bloom, ToneMapping } from '@react-three/postprocessing'
 
 import Player from './Player'
-import Weapon from './Weapon'
 import Map from './Map'
-import TargetBot from './TargetBot'
-import DataFragment from './DataFragment'
-import SkillTarget from './SkillTarget'
-import VIPBot from './VIPBot'
-import HUD from './HUD'
-import PortfolioUI from './PortfolioUI'
-import MissionBriefing from './MissionBriefing'
+import ButtonTrigger from './ButtonTrigger'
+import CardOverlay from './CardOverlay'
 import IntroScreen from './IntroScreen'
 
 import { websiteProjects, dataProjects, skills, bossData } from '@/data/projects'
+import { useAudioEffects } from '@/hooks/useAudioEffects'
 
 /**
  * Game – master component.
- * Wraps Canvas + Physics, manages all game state, and renders UI overlays.
+ * Wraps Canvas + Physics, manages third-person cat state, and renders UI cards.
  */
 export default function Game() {
-  // Game state
   const [started, setStarted] = useState(false)
-  const [hitTargets, setHitTargets] = useState(new Set())
-  const [activeProject, setActiveProject] = useState(null)
-  const [activeTargetType, setActiveTargetType] = useState(null)
-  const [showBriefing, setShowBriefing] = useState(false)
-  const [isFiring, setIsFiring] = useState(false)
-  const [currentZone, setCurrentZone] = useState('THE COMPOUND')
+  const [activeCard, setActiveCard] = useState(null)
+  
+  // Track player position for zone detection (optional but good for future triggers)
   const playerPos = useRef([0, 2, 15])
 
-  // All target data for counting
-  const totalTargets = websiteProjects.length + dataProjects.length + skills.length + 1 // +1 for boss
-
-  // Handle entering the game
   const handleEnter = useCallback(() => {
     setStarted(true)
   }, [])
 
-  // Handle shooting (visual feedback)
-  const handleShoot = useCallback(() => {
-    setIsFiring(true)
-    setTimeout(() => setIsFiring(false), 150)
+  // When a physical button is stepped on
+  const handleButtonPress = useCallback((projectData) => {
+    setActiveCard(projectData)
   }, [])
 
-  // Handle hitting a target
-  const handleHit = useCallback((targetId, targetType) => {
-    if (hitTargets.has(targetId)) {
-      // Already hit – re-open the project UI
-      if (targetType === 'boss') {
-        setShowBriefing(true)
-      } else {
-        const allData = [...websiteProjects, ...dataProjects, ...skills]
-        const data = allData.find((d) => d.id === targetId)
-        if (data) {
-          setActiveProject(data)
-          setActiveTargetType(targetType)
-        }
-      }
-      return
-    }
-
-    setHitTargets((prev) => new Set([...prev, targetId]))
-
-    if (targetType === 'boss') {
-      setShowBriefing(true)
-    } else {
-      const allData = [...websiteProjects, ...dataProjects, ...skills]
-      const data = allData.find((d) => d.id === targetId)
-      if (data) {
-        setActiveProject(data)
-        setActiveTargetType(targetType)
-      }
-    }
-  }, [hitTargets])
-
-  // Close project overlay
-  const handleCloseProject = useCallback(() => {
-    setActiveProject(null)
-    setActiveTargetType(null)
+  const handleCloseCard = useCallback(() => {
+    setActiveCard(null)
   }, [])
 
-  // Track player position for zone detection
-  const setPlayerPosition = useCallback((pos) => {
-    playerPos.current = pos
-    // Simple zone detection based on position
-    const x = pos[0]
-    const z = pos[2]
-
-    if (x < -14 && z < 12 && z > -10) setCurrentZone('ZONE A: BOT GALLERY')
-    else if (x > 14 && z < 12 && z > -10) setCurrentZone('ZONE B: DATA LAB')
-    else if (z < -20) setCurrentZone('ZONE C: SKILLS RANGE')
-    else if (Math.abs(x) < 4 && z > -8 && z < -2) setCurrentZone('BOSS AREA')
-    else setCurrentZone('THE COMPOUND')
-  }, [])
-
-  // Bot positions for Zone A
-  const botPositions = useMemo(() => [
+  // Bot positions for Zone A (Websites)
+  const webPositions = useMemo(() => [
     [-20, 0, 6],
     [-26, 0, 4],
     [-32, 0, 0],
     [-22, 0, -4],
   ], [])
 
-  // Fragment positions for Zone B
-  const fragmentPositions = useMemo(() => [
-    [22, 2, 4],
-    [28, 2.5, 0],
-    [25, 3, -4],
+  // Fragment positions for Zone B (Data)
+  const dataPositions = useMemo(() => [
+    [22, 0, 4],
+    [28, 0, 0],
+    [25, 0, -4],
   ], [])
 
   // Skill target positions for Zone C
@@ -130,98 +71,108 @@ export default function Game() {
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black" style={{ cursor: 'none' }}>
-      {/* 3D Canvas */}
-      <Canvas
-        shadows
-        camera={{ fov: 75, near: 0.1, far: 200, position: [0, 2, 15] }}
-        gl={{ antialias: true, alpha: false }}
-        style={{ position: 'absolute', inset: 0 }}
-      >
-        <Suspense fallback={null}>
-          <Physics
-          gravity={[0, -20, 0]}
-          tolerance={0.0001}
-          iterations={20}
-          broadphase="SAP"
+    <>
+      <div className="relative w-screen h-screen overflow-hidden bg-[#87ceeb]">
+        {/* 3D Canvas */}
+        <Canvas
+          shadows
+          camera={{ fov: 60, near: 0.1, far: 200, position: [0, 5, 20] }}
+          gl={{ antialias: true, alpha: false }}
+          style={{ position: 'absolute', inset: 0 }}
         >
-          {/* Player */}
-          <Player
-            onShoot={handleShoot}
-            onHit={handleHit}
-            setPlayerPosition={setPlayerPosition}
-          />
-
-          {/* Map */}
-          <Map />
-
-          {/* Zone A: Training Bots */}
-          {websiteProjects.map((project, i) => (
-            <TargetBot
-              key={project.id}
-              projectData={project}
-              position={botPositions[i] || [-20 + i * 3, 0, 5]}
-              isHit={hitTargets.has(project.id)}
+          <color attach="background" args={['#87ceeb']} />
+          <Suspense fallback={null}>
+            {/* Ghibli Lighting */}
+            <ambientLight intensity={1.0} color="#d0e7ff" />
+            <hemisphereLight skyColor="#87ceeb" groundColor="#f0e68c" intensity={0.6} />
+            <directionalLight
+              color="#fffdef"
+              intensity={2}
+              position={[50, 50, 20]}
+              castShadow
+              shadow-mapSize={[2048, 2048]}
+              shadow-bias={-0.0005}
+              shadow-camera-far={100}
+              shadow-camera-left={-30}
+              shadow-camera-right={30}
+              shadow-camera-top={30}
+              shadow-camera-bottom={-30}
             />
-          ))}
+            <Environment preset="forest" />
 
-          {/* Zone B: Data Fragments */}
-          {dataProjects.map((project, i) => (
-            <DataFragment
-              key={project.id}
-              projectData={project}
-              position={fragmentPositions[i] || [22 + i * 3, 2, 0]}
-              isHit={hitTargets.has(project.id)}
-            />
-          ))}
+            <Physics
+              gravity={[0, -15, 0]} // Slightly lighter gravity for bouncy cat feeling
+              tolerance={0.0001}
+              iterations={20}
+              broadphase="SAP"
+            >
+              {/* Third Person Player */}
+              <Player />
 
-          {/* Zone C: Skill Targets */}
-          {skills.map((skill, i) => (
-            <SkillTarget
-              key={skill.id}
-              skillData={skill}
-              position={skillPositions[i] || [(-skills.length / 2 + i) * 3.5, 0, -32]}
-              isHit={hitTargets.has(skill.id)}
-            />
-          ))}
+              {/* Map */}
+              <Map />
 
-          {/* Boss: VIP Bot */}
-          <VIPBot
-            bossData={bossData}
-            position={[0, 0.5, -5]}
-            isHit={hitTargets.has(bossData.id)}
-          />
-        </Physics>
+              {/* Zone A: Websites */}
+              {websiteProjects.map((project, i) => (
+                <ButtonTrigger
+                  key={project.id}
+                  projectData={project}
+                  position={webPositions[i] || [-20 + i * 3, 0, 5]}
+                  onPress={handleButtonPress}
+                  color="#ff7b7b"
+                />
+              ))}
 
-        {/* Weapon overlay (rendered in 3D but as HUD layer) */}
-        <Weapon isFiring={isFiring} />
-        </Suspense>
-      </Canvas>
+              {/* Zone B: Data Science */}
+              {dataProjects.map((project, i) => (
+                <ButtonTrigger
+                  key={project.id}
+                  projectData={project}
+                  position={dataPositions[i] || [22 + i * 3, 0, 0]}
+                  onPress={handleButtonPress}
+                  color="#a8e6cf"
+                />
+              ))}
 
-      {/* HUD Overlay */}
-      <HUD
-        scannedCount={hitTargets.size}
-        totalCount={totalTargets}
-        currentZone={currentZone}
-        isFiring={isFiring}
-      />
+              {/* Zone C: Skills */}
+              {skills.map((skill, i) => (
+                <ButtonTrigger
+                  key={skill.id}
+                  projectData={{ ...skill, type: 'skill' }} // Add type so CardOverlay knows
+                  position={skillPositions[i] || [(-skills.length / 2 + i) * 3.5, 0, -32]}
+                  onPress={handleButtonPress}
+                  color="#ffdac1"
+                />
+              ))}
 
-      {/* Project detail modal */}
-      {activeProject && (
-        <PortfolioUI
-          projectData={activeProject}
-          targetType={activeTargetType}
-          onClose={handleCloseProject}
-        />
-      )}
+              {/* Boss/VIP (Middle Area) */}
+              <ButtonTrigger
+                key={bossData.id}
+                projectData={{ ...bossData, type: 'boss' }}
+                position={[0, 1.25, -5]} // On the elevated platform
+                onPress={handleButtonPress}
+                color="#fdfbf7"
+              />
+            </Physics>
 
-      {/* Boss mission briefing */}
-      {showBriefing && (
-        <MissionBriefing
-          bossData={bossData}
-          onClose={() => setShowBriefing(false)}
-        />
-      )}
-    </div>
+            {/* Post-Processing */}
+            <EffectComposer disableNormalPass>
+              <Bloom luminanceThreshold={0.8} luminanceSmoothing={0.9} height={300} intensity={0.8} />
+              <ToneMapping adaptive={true} resolution={1024} />
+            </EffectComposer>
+          </Suspense>
+        </Canvas>
+        
+        {/* Simple constant overlay HUD instructions */}
+        <div className="absolute top-8 left-8 p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm pointer-events-none">
+          <p className="text-[#2c3e50] font-bold text-sm">WASD to Move</p>
+          <p className="text-[#2c3e50] font-bold text-sm mt-1">SPACE to Jump</p>
+          <p className="text-[#5a6c7d] font-bold text-[10px] mt-2 tracking-widest uppercase">Jump on a button to view!</p>
+        </div>
+      </div>
+
+      {/* Pop-up Card Overlay */}
+      <CardOverlay activeCard={activeCard} onClose={handleCloseCard} />
+    </>
   )
 }

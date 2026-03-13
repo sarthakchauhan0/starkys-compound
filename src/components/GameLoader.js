@@ -1,7 +1,17 @@
 'use client'
 
 import React, { Component, useState, useEffect } from 'react'
-import Game from '@/components/Game'
+// Dynamically import Game to disable SSR
+import dynamic from 'next/dynamic'
+
+const Game = dynamic(() => import('@/components/Game'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-screen h-screen flex items-center justify-center bg-black text-cyan-400 font-mono text-sm tracking-widest cursor-wait">
+      INITIALIZING COMPONENT...
+    </div>
+  )
+})
 
 // Catch top-level R3F / Canvas errors
 class ErrorBoundary extends Component {
@@ -40,8 +50,7 @@ export default function GameLoader() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Only mount the Three.js Canvas after the component has fully mounted
-    // in the browser to avoid Next.js hydration mismatch
+    // Basic hydration check
     setMounted(true)
   }, [])
 
