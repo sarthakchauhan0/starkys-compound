@@ -1,265 +1,156 @@
 'use client'
 
-import { usePlane, useBox } from '@react-three/cannon'
-import { Text } from '@react-three/drei'
+import { useMemo } from 'react'
 import * as THREE from 'three'
+import { usePlane, useBox } from '@react-three/cannon'
+import House from './House'
+import Grass from './Grass'
+import Road from './Road'
 
-// ============================================
-// GROUND
-// ============================================
-function Ground() {
-  const [ref] = usePlane(() => ({
-    rotation: [-Math.PI / 2, 0, 0],
-    position: [0, 0, 0],
-    material: { friction: 0.5 },
-  }))
+import { websiteProjects, dataProjects, skills, bossData } from '@/data/projects'
 
-  return (
-    <mesh ref={ref} receiveShadow>
-      <planeGeometry args={[100, 100]} />
-      <meshToonMaterial color="#7fb376" />
-    </mesh>
-  )
-}
-
-// ============================================
-// WALL (reusable physics wall)
-// ============================================
-function Wall({ position, size, color = '#2a2a3e', emissive = '#000000', emissiveIntensity = 0 }) {
-  const [ref] = useBox(() => ({
-    type: 'Static',
-    position,
-    args: size,
-  }))
-
-  return (
-    <mesh ref={ref} castShadow receiveShadow>
-      <boxGeometry args={size} />
-      <meshToonMaterial
-        color={color}
-        emissive={emissive}
-        emissiveIntensity={emissiveIntensity}
-      />
-    </mesh>
-  )
-}
-
-// ============================================
-// CRATE (decorative + physics)
-// ============================================
-function Crate({ position, size = [1.2, 1.2, 1.2] }) {
-  const [ref] = useBox(() => ({
-    type: 'Static',
-    position,
-    args: size,
-  }))
-
-  return (
-    <mesh ref={ref} castShadow receiveShadow>
-      <boxGeometry args={size} />
-      <meshToonMaterial color="#d4a373" />
-    </mesh>
-  )
-}
-
-// ============================================
-// ZONE SIGN
-// ============================================
-function ZoneSign({ position, text, color = '#00ffcc' }) {
-  return (
-    <group position={position}>
-      {/* Sign post */}
-      <mesh position={[0, 1.5, 0]}>
-        <boxGeometry args={[0.05, 3, 0.05]} />
-        <meshToonMaterial color="#8b5a2b" />
-      </mesh>
-      {/* Sign board */}
-      <mesh position={[0, 3.2, 0]}>
-        <boxGeometry args={[4, 0.8, 0.1]} />
-        <meshToonMaterial color="#fcd5ce" />
-      </mesh>
-      {/* Glowing border */}
-      <mesh position={[0, 3.2, 0.06]}>
-        <boxGeometry args={[4.1, 0.9, 0.01]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={0.5}
-          transparent
-          opacity={0.3}
-        />
-      </mesh>
-      <Text
-        position={[0, 3.2, 0.12]}
-        fontSize={0.35}
-        color={color}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {text}
-      </Text>
-    </group>
-  )
-}
-
-// ============================================
-// BARREL (decorative)
-// ============================================
-function Barrel({ position }) {
-  const [ref] = useBox(() => ({
-    type: 'Static',
-    position,
-    args: [0.6, 1.2, 0.6],
-  }))
-
-  return (
-    <mesh ref={ref} castShadow>
-      <cylinderGeometry args={[0.3, 0.35, 1.2, 12]} />
-      <meshToonMaterial color="#c16565" />
-    </mesh>
-  )
-}
-
-// ============================================
-// RAMP
-// ============================================
-function Ramp({ position, rotation = [0, 0, 0] }) {
-  const [ref] = useBox(() => ({
-    type: 'Static',
-    position,
-    rotation,
-    args: [3, 0.3, 4],
-  }))
-
-  return (
-    <mesh ref={ref} castShadow receiveShadow rotation={rotation}>
-      <boxGeometry args={[3, 0.3, 4]} />
-      <meshToonMaterial color="#e3d5ca" />
-    </mesh>
-  )
-}
-
-// ============================================
-// LANE DIVIDER (for shooting range)
-// ============================================
-function LaneDivider({ position }) {
-  const [ref] = useBox(() => ({
-    type: 'Static',
-    position,
-    args: [0.1, 2, 8],
-  }))
-
-  return (
-    <mesh ref={ref} castShadow>
-      <boxGeometry args={[0.1, 2, 8]} />
-      <meshToonMaterial color="#b5c6e0" />
-    </mesh>
-  )
-}
-
-// ============================================
-// MAIN MAP COMPONENT
-// ============================================
+/**
+ * Map handles the static physical boundaries, the floor, the winding roads, and houses.
+ */
 export default function Map() {
+  // 1. The Ground Plane (Physics & Visual)
+  const [floorRef] = usePlane(() => ({
+    type: 'Static',
+    rotation: [-Math.PI / 2, 0, 0],
+    position: [0, 0, 0], // Grass plane at y = 0
+    material: { friction: 0.1 },
+  }))
+
+  // 2. Invisible Physics Boundaries (prevent falling off the world)
+  const Boundary = ({ position, args }) => {
+    useBox(() => ({ type: 'Static', position, args }))
+    return null
+  }
+
+  // 3. The Main Winding Road Spline (Flattened to y = 0.1)
+  const roadCurve = useMemo(() => {
+    const points = [
+      new THREE.Vector3(0, 0.1, 30),
+      new THREE.Vector3(-10, 0.1, 15),
+      new THREE.Vector3(-25, 0.1, -5), // Path to Projects
+      new THREE.Vector3(-2, 0.1, -10), // Loops back mid
+      new THREE.Vector3(-2, 0.1, -20), // Path to Skills
+      new THREE.Vector3(15, 0.1, -15), 
+      new THREE.Vector3(25, 0.1, -12), // Path to Boss/Contact
+    ]
+    return new THREE.CatmullRomCurve3(points)
+  }, [])
+
+  // 4. Calculate proper placements for Houses along the road
+  // We place houses at specific 't' parameter along the spline (0 to 1)
+  const houses = useMemo(() => {
+    const configs = [
+      { t: 0.2, data: { title: 'About Me', description: 'Enter the cottage to learn my story.', color: '#ff7b7b' } },
+      { t: 0.45, data: { title: 'Projects Archive', description: 'Review my past works and experiments.', color: '#4ba3e3' } },
+      { t: 0.7, data: { title: 'Abilities & Tools', description: 'My technical stack and competencies.', type: 'skill', color: '#f1c40f' } },
+      { t: 0.9, data: { ...bossData, title: 'Contact HQ', type: 'boss', color: '#2c3e50' } },
+    ]
+
+    return configs.map((conf) => {
+      // Get point on road
+      const point = roadCurve.getPointAt(conf.t)
+      // Get tangent (forward direction of the road at this point)
+      const tangent = roadCurve.getTangentAt(conf.t).normalize()
+      
+      // Calculate normal vector (perpendicular to tangent on the XZ plane)
+      // We choose to push the house to the right side of the road
+      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize()
+      
+      // House offset from center of road (radius is 2.5, so 4 is safely on the grass)
+      const offsetDistance = 4.5
+      
+      // Calculate final house position: House Base at y = 0
+      const position = new THREE.Vector3(
+        point.x + normal.x * offsetDistance,
+        0, 
+        point.z + normal.z * offsetDistance
+      )
+      
+      // House must face the road. atan2 calculates rotation based on the vector pointing TO the road (which is -normal)
+      const rotationY = Math.atan2(-normal.x, -normal.z)
+
+      return {
+        id: conf.data.title,
+        position: [position.x, position.y, position.z],
+        rotation: [0, rotationY, 0],
+        projectData: conf.data,
+        color: conf.data.color || '#fdfbf7'
+      }
+    })
+  }, [roadCurve])
+
   return (
     <group>
-      {/* Ground */}
-      <Ground />
+      {/* Visual Floor */}
+      <mesh ref={floorRef} receiveShadow>
+        <planeGeometry args={[200, 200]} />
+        {/* Lush green base */}
+        <meshToonMaterial color="#4ade80" />
+      </mesh>
 
-      {/* Fog for atmosphere - matches sky color */}
-      <fog attach="fog" args={['#87ceeb', 15, 70]} />
+      {/* Physics Boundaries */}
+      <Boundary position={[0, 10, -50]} args={[100, 20, 1]} /> // North
+      <Boundary position={[0, 10, 50]} args={[100, 20, 1]} />  // South
+      <Boundary position={[-50, 10, 0]} args={[1, 20, 100]} /> // West
+      <Boundary position={[50, 10, 0]} args={[1, 20, 100]} />  // East
 
-      {/* === BOUNDARY WALLS (Cream Stucco) === */}
-      {/* North */}
-      <Wall position={[0, 3, -40]} size={[100, 6, 1]} color="#fdfbf7" />
-      {/* South */}
-      <Wall position={[0, 3, 25]} size={[100, 6, 1]} color="#fdfbf7" />
-      {/* East */}
-      <Wall position={[40, 3, -7.5]} size={[1, 6, 66]} color="#fdfbf7" />
-      {/* West */}
-      <Wall position={[-40, 3, -7.5]} size={[1, 6, 66]} color="#fdfbf7" />
+      {/* Swaying Grass Component */}
+      {/* Covers the map with 15k blades */}
+      <Grass count={15000} bounds={50} />
 
-      {/* ============================================ */}
-      {/* ZONE A: Bot Gallery (Left side, -x) */}
-      {/* ============================================ */}
-      <ZoneSign position={[-20, 0, 10]} text="▸ ZONE A" color="#ff7b7b" />
+      {/* The Winding Road (Physics Enabled) */}
+      {/* Visual Road is drawn at y=0.1 to avoid z-fighting with the grass at y=0 */}
+      <Road curve={roadCurve} />
 
-      {/* Zone A walls / corridors */}
-      <Wall position={[-15, 2, 0]} size={[0.5, 4, 20]} color="#e3d5ca" />
-      <Wall position={[-30, 2, -8]} size={[12, 4, 0.5]} color="#e3d5ca" />
+      {/* Stylized Portfolio Houses with integrated Triggers */}
+      {houses.map((h) => (
+        <House 
+          key={h.id}
+          position={h.position}
+          rotation={h.rotation}
+          color={h.color}
+          projectData={h.projectData}
+        />
+      ))}
+      
+      {/* Decorative Trees alongside the path */}
+      <group position={[-18, 0, 5]}>
+        <mesh position={[0, 1, 0]} castShadow>
+          <sphereGeometry args={[1.5, 8, 8]} />
+          <meshToonMaterial color="#22c55e" />
+        </mesh>
+        <mesh position={[0, 0.5, 0]} castShadow>
+         <cylinderGeometry args={[0.2, 0.4, 2]} />
+         <meshToonMaterial color="#8e6b52" />
+        </mesh>
+      </group>
+      
+      <group position={[12, 0, -3]}>
+        <mesh position={[0, 1.5, 0]} castShadow>
+          <sphereGeometry args={[2, 8, 8]} />
+          <meshToonMaterial color="#16a34a" />
+        </mesh>
+        <mesh position={[0, 0.5, 0]} castShadow>
+         <cylinderGeometry args={[0.3, 0.5, 2]} />
+         <meshToonMaterial color="#8e6b52" />
+        </mesh>
+      </group>
 
-      {/* Zone A crates */}
-      <Crate position={[-22, 0.6, 5]} />
-      <Crate position={[-22, 0.6, 3.5]} size={[1, 1, 1]} />
-      <Crate position={[-25, 0.6, -2]} />
-      <Crate position={[-28, 0.6, 8]} size={[1.5, 1, 1.5]} />
-      <Crate position={[-35, 0.6, 2]} />
-
-      <Barrel position={[-18, 0.6, -3]} />
-      <Barrel position={[-32, 0.6, 6]} />
-
-      {/* ============================================ */}
-      {/* ZONE B: Data Lab (Right side, +x) */}
-      {/* ============================================ */}
-      <ZoneSign position={[20, 0, 10]} text="▸ ZONE B" color="#a8e6cf" />
-
-      {/* Zone B enclosure walls */}
-      <Wall position={[15, 2, 0]} size={[0.5, 4, 20]} color="#e3d5ca" />
-      <Wall position={[30, 2, -8]} size={[12, 4, 0.5]} color="#e3d5ca" />
-
-      {/* Zone B ambient glow lights */}
-      <pointLight position={[22, 3, 0]} color="#ffd700" intensity={0.5} distance={12} />
-      <pointLight position={[28, 3, -5]} color="#a8e6cf" intensity={0.3} distance={10} />
-      <pointLight position={[25, 2, 5]} color="#ffd700" intensity={0.4} distance={8} />
-
-      {/* ============================================ */}
-      {/* ZONE C: Skills Range (Back / -z) */}
-      {/* ============================================ */}
-      <ZoneSign position={[0, 0, -18]} text="▸ ZONE C" color="#ffdac1" />
-
-      {/* Range back wall */}
-      <Wall position={[0, 2, -35]} size={[30, 4, 0.5]} color="#fdfbf7" />
-
-      {/* Lane dividers */}
-      <LaneDivider position={[-10, 1, -30]} />
-      <LaneDivider position={[-5, 1, -30]} />
-      <LaneDivider position={[0, 1, -30]} />
-      <LaneDivider position={[5, 1, -30]} />
-      <LaneDivider position={[10, 1, -30]} />
-
-      {/* Range counter */}
-      <Wall position={[0, 0.5, -24]} size={[22, 1, 0.5]} color="#d4a373" />
-
-      {/* ============================================ */}
-      {/* BOSS AREA: Center elevated platform */}
-      {/* ============================================ */}
-      {/* Platform */}
-      <Wall position={[0, 0.25, -5]} size={[6, 0.5, 6]} color="#fdfbf7" emissive="#ffd700" emissiveIntensity={0.2} />
-      {/* Ramp up to platform */}
-      <Ramp position={[0, 0.15, -1.5]} rotation={[-0.12, 0, 0]} />
-
-      {/* Boss area accent lights */}
-      <pointLight position={[0, 4, -5]} color="#ffd700" intensity={0.6} distance={10} />
-      <pointLight position={[-2, 2, -5]} color="#ff8c00" intensity={0.3} distance={6} />
-      <pointLight position={[2, 2, -5]} color="#ff8c00" intensity={0.3} distance={6} />
-
-      {/* === CENTRAL STRUCTURES === */}
-      {/* Some mid-map cover */}
-      <Crate position={[-5, 0.6, 5]} />
-      <Crate position={[5, 0.6, 5]} />
-      <Crate position={[-8, 0.6, 0]} size={[2, 1.5, 1]} />
-      <Crate position={[8, 0.6, 0]} size={[2, 1.5, 1]} />
-
-      <Barrel position={[-3, 0.6, 10]} />
-      <Barrel position={[3, 0.6, 10]} />
-      <Barrel position={[12, 0.6, 10]} />
-
-      {/* Spawn area walls (behind player start) */}
-      <Wall position={[-4, 2, 20]} size={[8, 4, 0.5]} color="#e3d5ca" />
-      <Wall position={[4, 2, 20]} size={[8, 4, 0.5]} color="#e3d5ca" />
-
-      {/* Grid lines on floor (decorative) */}
-      <gridHelper args={[100, 100, '#8ebf85', '#7fb376']} position={[0, 0.01, 0]} />
+      <group position={[-20, 0, -25]}>
+        <mesh position={[0, 2, 0]} castShadow>
+          <sphereGeometry args={[2.5, 8, 8]} />
+          <meshToonMaterial color="#22c55e" />
+        </mesh>
+        <mesh position={[0, 1, 0]} castShadow>
+         <cylinderGeometry args={[0.4, 0.6, 2]} />
+         <meshToonMaterial color="#8e6b52" />
+        </mesh>
+      </group>
     </group>
   )
 }

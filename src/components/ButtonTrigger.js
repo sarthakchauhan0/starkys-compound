@@ -4,14 +4,16 @@ import { useState, useRef } from 'react'
 import { useCylinder } from '@react-three/cannon'
 import { Html } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
+import useUIStore from '@/store/useUIStore'
 
 /**
  * A floor button that compresses when stepped on.
- * Triggers `onPress(projectData)` when a physical body (like the player) collides with it from above.
+ * Opens the Ghibli Card Overlay via global state when a physical body collides with it from above.
  */
-export default function ButtonTrigger({ position, projectData, onPress, color = '#ff7b7b' }) {
+export default function ButtonTrigger({ position, projectData, color = '#ff7b7b' }) {
   const [isPressed, setIsPressed] = useState(false)
   const pressTimeout = useRef(null)
+  const openCard = useUIStore((state) => state.openCard)
 
   // A flat cylinder for the button base
   const [baseRef] = useCylinder(() => ({
@@ -29,7 +31,7 @@ export default function ButtonTrigger({ position, projectData, onPress, color = 
     onCollide: (e) => {
       if (!isPressed) {
         setIsPressed(true)
-        if (onPress) onPress(projectData)
+        openCard(projectData)
         
         // Reset button visual after a few seconds
         clearTimeout(pressTimeout.current)
@@ -50,6 +52,7 @@ export default function ButtonTrigger({ position, projectData, onPress, color = 
         // We only animate the visual mesh relative to its physics body position 
         // to keep it simple, or we can just animate the mesh directly.
         // Since useCylinder controls the mesh position entirely, we'll apply a local offset to the geometry.
+        buttonRef.current.position.y = position[1] + visualY.current
     }
   })
 
@@ -63,7 +66,6 @@ export default function ButtonTrigger({ position, projectData, onPress, color = 
 
       {/* Button */}
       <mesh ref={buttonRef} castShadow receiveShadow>
-        {/* We wrap the geometry in a group or just offset the geometry to animate it visually while physics stays static */}
         <cylinderGeometry args={[0.8, 0.8, 0.2, 16]} />
         <meshToonMaterial color={isPressed ? '#4ba3e3' : color} />
       </mesh>
