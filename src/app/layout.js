@@ -9,8 +9,8 @@ const quicksand = Quicksand({
 export const metadata = {
   title: "Starky's Portfolio – The Compound",
   description:
-    "An FPS-themed interactive portfolio. Enter the compound, scan targets, and discover projects, skills, and achievements in a Counter-Strike inspired training map.",
-  keywords: ["portfolio", "FPS", "interactive", "Three.js", "React", "Next.js", "Web3"],
+    "Step into a vibrant, third-person adventure. Explore a sun-drenched Ghibli-style village as a curious cat. Follow winding paths, discover cozy houses, and interact with a world where every corner reveals a new project, skill, and achievement.",
+  keywords: ["portfolio", "Ghibli-style", "interactive", "3D Game", "Cat Game", "Three.js", "React", "Next.js", "Creative Developer"],
   authors: [{ name: "Starky" }],
 };
 
