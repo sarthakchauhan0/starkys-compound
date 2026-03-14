@@ -1,17 +1,47 @@
 'use client'
 
 import { useRef } from 'react'
+import { useCompoundBody } from '@react-three/cannon'
+import { useFrame } from '@react-three/fiber'
+import * as THREE from 'three'
 import DoorTrigger from './DoorTrigger'
+import useUIStore from '@/store/useUIStore'
 
 /**
  * A stylized, Ghibli-inspired House model built from basic primitives.
  * Features a high-pitched roof, basic door, and windows.
  */
 export default function House({ position, rotation = [0, 0, 0], color = '#fdfbf7', roofColor = '#e74c3c', projectData }) {
-  const groupRef = useRef()
+  const [groupRef] = useCompoundBody(() => ({
+    type: 'Static',
+    position,
+    rotation,
+    shapes: [
+      { type: 'Box', position: [0, 1.5, 0], args: [4, 3, 4] },
+      { type: 'Box', position: [0, 3.8, 0], args: [3.8, 2.5, 3.8] }
+    ]
+  }))
+
+  const doorHingeRef = useRef()
+
+  // Swing door open if this house is active
+  useFrame((state, delta) => {
+    if (doorHingeRef.current) {
+      const store = useUIStore.getState()
+      const isOpen = store.isCardOpen && (store.activeCard?.title === projectData?.title)
+      const targetRotationY = isOpen ? -Math.PI / 2 : 0
+      
+      // Smoothly swing door
+      doorHingeRef.current.rotation.y = THREE.MathUtils.lerp(
+        doorHingeRef.current.rotation.y,
+        targetRotationY,
+        delta * 5
+      )
+    }
+  })
 
   return (
-    <group ref={groupRef} position={position} rotation={rotation}>
+    <group ref={groupRef}>
       
       {/* Interactive Trigger for UI Overlay */}
       {projectData && (
@@ -40,16 +70,19 @@ export default function House({ position, rotation = [0, 0, 0], color = '#fdfbf7
         <meshToonMaterial color="#b3ada9" />
       </mesh>
 
-      {/* Door */}
-      <mesh position={[0, 0.9, 2.01]} castShadow>
-        <boxGeometry args={[1, 1.8, 0.1]} />
-        <meshToonMaterial color="#8e6b52" />
-      </mesh>
-      {/* Doorknob */}
-      <mesh position={[0.3, 0.9, 2.08]}>
-        <sphereGeometry args={[0.08]} />
-        <meshBasicMaterial color="#f1c40f" />
-      </mesh>
+      {/* Door Hinge system */}
+      <group ref={doorHingeRef} position={[-0.5, 0.9, 2.01]}>
+        {/* Door body */}
+        <mesh position={[0.5, 0, 0]} castShadow>
+          <boxGeometry args={[1, 1.8, 0.1]} />
+          <meshToonMaterial color="#8e6b52" />
+        </mesh>
+        {/* Doorknob */}
+        <mesh position={[0.8, 0, 0.07]}>
+          <sphereGeometry args={[0.08]} />
+          <meshBasicMaterial color="#f1c40f" />
+        </mesh>
+      </group>
 
       {/* Windows */}
       <group position={[-1, 1.5, 2.01]}>

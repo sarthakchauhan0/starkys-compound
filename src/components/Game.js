@@ -4,12 +4,13 @@ import { useState, useRef, useMemo, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Physics } from '@react-three/cannon'
 import { Environment } from '@react-three/drei'
-import { EffectComposer, Bloom, ToneMapping } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing'
 
 import Player from './Player'
 import Map from './Map'
 import CardOverlay from './CardOverlay'
 import IntroScreen from './IntroScreen'
+import SceneLights from './SceneLights'
 
 import { websiteProjects, dataProjects, skills, bossData } from '@/data/projects'
 import { useAudioEffects } from '@/hooks/useAudioEffects'
@@ -78,22 +79,7 @@ export default function Game() {
           
           <Suspense fallback={null}>
             {/* Ghibli Lighting */}
-            <ambientLight intensity={1.0} color="#d0e7ff" />
-            <hemisphereLight skyColor="#e0f2fe" groundColor="#4ade80" intensity={0.6} />
-            <directionalLight
-              color="#fffdef"
-              intensity={2}
-              position={[50, 50, -20]}
-              castShadow
-              shadow-mapSize={[2048, 2048]}
-              shadow-camera-left={-50}
-              shadow-camera-right={50}
-              shadow-camera-top={50}
-              shadow-camera-bottom={-50}
-              shadow-camera-near={0.1}
-              shadow-camera-far={200}
-              shadow-bias={-0.0001}
-            />
+            <SceneLights />
             <Environment preset="forest" />
 
             {/* Physics World */}
@@ -109,6 +95,7 @@ export default function Game() {
             <EffectComposer disableNormalPass>
               <Bloom luminanceThreshold={0.8} luminanceSmoothing={0.9} height={300} intensity={0.8} />
               <ToneMapping adaptive={true} resolution={1024} />
+              <Vignette eskil={false} offset={0.1} darkness={1.1} />
             </EffectComposer>
           </Suspense>
         </Canvas>

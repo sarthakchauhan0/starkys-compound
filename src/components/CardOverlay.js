@@ -5,38 +5,64 @@ import useUIStore from '@/store/useUIStore'
 
 export default function CardOverlay() {
   const { activeCard, isCardOpen, closeCard } = useUIStore()
-  const [visible, setVisible] = useState(false)
+  const [phase, setPhase] = useState('hidden') // hidden -> fadeToBlack1 -> cardVisible -> fadeToBlack2 -> hidden
 
   // Trigger animations when card opens/closes
   useEffect(() => {
     if (isCardOpen && activeCard) {
-      setVisible(true)
+      setPhase('fadeToBlack1')
+      setTimeout(() => setPhase('cardVisible'), 800) // 800ms of black before revealing card
     } else {
-      setVisible(false)
+      if (phase !== 'hidden') {
+        setPhase('fadeToBlack2')
+        setTimeout(() => setPhase('hidden'), 800) // 800ms of black before revealing world
+      }
     }
   }, [isCardOpen, activeCard])
 
-  if (!activeCard && !visible) return null
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.code === 'Escape' && isCardOpen) {
+        closeCard();
+        // Attempt to re-lock pointer on exit
+        const canvas = document.querySelector('canvas');
+        if (canvas) canvas.requestPointerLock();
+      }
+    }
+    window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [isCardOpen, closeCard])
+
+  if (!activeCard && phase === 'hidden') return null
 
   const isSkill = activeCard?.type === 'skill'
   const isBoss = activeCard?.type === 'boss'
+  
+  const isCardPhase = phase === 'cardVisible'
+  const isBlackPhase = phase === 'fadeToBlack1' || phase === 'fadeToBlack2'
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-500 ${
-        visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-700 ${
+        phase !== 'hidden' ? 'pointer-events-auto' : 'pointer-events-none'
       }`}
     >
-      {/* Soft overlay backdrop */}
+      {/* Cinematic Black Overlay Transition Layer */}
       <div 
-        className={`absolute inset-0 transition-opacity duration-700 ${visible ? 'bg-[#2c3e50]/80 backdrop-blur-md' : 'bg-transparent'}`}
-        onClick={closeCard} 
+        className={`absolute inset-0 bg-black transition-opacity duration-700 ${
+          isBlackPhase ? 'opacity-100 z-10' : (isCardPhase ? 'opacity-80 z-0' : 'opacity-0 -z-10')
+        } ${isCardPhase && 'backdrop-blur-xl'}`}
+        onClick={() => {
+          closeCard();
+          document.querySelector('canvas')?.requestPointerLock();
+        }} 
       />
 
       {/* Main Card (House Interior Simulation) */}
       <div
-        className={`relative max-w-5xl w-full h-[85vh] mx-6 rounded-3xl overflow-hidden bg-[#fffdf2]/95 border border-white shadow-2xl flex flex-col transition-all duration-700 ease-out flex-shrink-0 ${
-          visible ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-12 opacity-0'
+        className={`relative z-20 max-w-5xl w-full h-[85vh] mx-6 rounded-3xl overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/50 shadow-2xl flex flex-col transition-all duration-1000 ease-out flex-shrink-0 ${
+          isCardPhase ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-12 opacity-0'
         }`}
         style={{
           boxShadow: `0 20px 80px ${activeCard?.color || '#87ceeb'}40`,
@@ -124,12 +150,15 @@ export default function CardOverlay() {
         </div>
 
         {/* Footer / Close Area */}
-        <div className="px-12 py-6 border-t border-[#2c3e50]/5 bg-white flex justify-between items-center flex-shrink-0">
+        <div className="px-12 py-6 border-t border-white/20 bg-white/40 backdrop-blur-md flex justify-between items-center flex-shrink-0">
           <span className="text-[12px] text-[#5a6c7d] font-bold tracking-widest uppercase">
-            {isBoss ? 'TRANSMISSION COMPLETE' : 'END OF RECORD'}
+            {isBoss ? 'TRANSMISSION COMPLETE' : 'PRESS [ESC] TO EXIT'}
           </span>
           <button
-            onClick={closeCard}
+            onClick={() => {
+              closeCard();
+              document.querySelector('canvas')?.requestPointerLock();
+            }}
             className="px-8 py-3 rounded-full text-sm font-bold text-white bg-[#e74c3c] hover:bg-[#c0392b] shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
           >
             Leave House

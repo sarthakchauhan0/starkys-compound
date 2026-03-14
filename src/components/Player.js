@@ -1,10 +1,12 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useSphere } from '@react-three/cannon'
 import * as THREE from 'three'
 import usePlayerControls from '@/hooks/usePlayerControls'
+import DustParticles from './DustParticles'
+import useUIStore from '@/store/useUIStore'
 
 const SPEED = 8
 const JUMP_FORCE = 8
@@ -12,7 +14,40 @@ const JUMP_FORCE = 8
 export default function Player({ setPlayerPosition }) {
   const keys = usePlayerControls()
   const canJump = useRef(true)
-  
+
+  const { gl } = useThree()
+  const yaw = useRef(0)
+  const pitch = useRef(0.2) // Start slightly angled down
+
+  useEffect(() => {
+    const handleMouseClick = () => {
+      if (document.pointerLockElement !== gl.domElement) {
+        gl.domElement.requestPointerLock()
+      }
+    }
+
+    const handleMouseMove = (e) => {
+      if (document.pointerLockElement === gl.domElement) {
+        const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0
+        const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0
+
+        yaw.current -= movementX * 0.002
+        pitch.current -= movementY * 0.002
+
+        const PI_2 = Math.PI / 2
+        pitch.current = Math.max(-0.1, Math.min(PI_2 - 0.1, pitch.current))
+      }
+    }
+
+    gl.domElement.addEventListener('click', handleMouseClick)
+    document.addEventListener('mousemove', handleMouseMove)
+
+    return () => {
+      gl.domElement.removeEventListener('click', handleMouseClick)
+      document.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [gl.domElement])
+
   // Physics body – sphere allows smooth rolling/sliding over terrain
   const [ref, api] = useSphere(() => ({
     mass: 50,
@@ -41,64 +76,83 @@ export default function Player({ setPlayerPosition }) {
   useEffect(() => {
     const unsubscribe = api.position.subscribe((p) => {
       position.current = p
+      useUIStore.getState().playerPosRef.current = p
       if (setPlayerPosition) setPlayerPosition(p)
     })
     return unsubscribe
   }, [api.position, setPlayerPosition])
 
   const catMeshRef = useRef()
+  const isMovingRef = useRef(false)
+
+  const frontVector = new THREE.Vector3()
+  const sideVector = new THREE.Vector3()
+  const moveDirection = new THREE.Vector3()
+  const upVector = new THREE.Vector3(0, 1, 0)
 
   // Camera setup
-  const cameraPosition = new THREE.Vector3()
   const cameraTarget = new THREE.Vector3()
 
   useFrame((state, delta) => {
-    // 1. Calculate Movement relative to world space
-    // Since it's an isometric/3rd person platformer, WASD can just map to world axes
-    const moveX = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0)
-    const moveZ = (keys.current.backward ? 1 : 0) - (keys.current.forward ? 1 : 0)
+    // 1. Calculate Camera-Relative Movement
+    // Use yaw to determine forward and side vectors on the XZ plane
+    frontVector.set(0, 0, -1).applyAxisAngle(upVector, yaw.current)
+    sideVector.set(1, 0, 0).applyAxisAngle(upVector, yaw.current)
 
-    const direction = new THREE.Vector3(moveX, 0, moveZ).normalize().multiplyScalar(SPEED)
+    frontVector.normalize()
+    sideVector.normalize()
 
-    // Apply movement
-    api.velocity.set(direction.x, velocity.current[1], direction.z)
+    // Inputs
+    const forwardInput = (keys.current.forward ? 1 : 0) - (keys.current.backward ? 1 : 0)
+    const sideInput = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0)
 
-    // 2. Jump
+    // Calculate final direction
+    moveDirection
+      .copy(frontVector)
+      .multiplyScalar(forwardInput)
+      .add(sideVector.clone().multiplyScalar(sideInput))
+      .normalize()
+
+    // 2. Apply Velocity
+    const targetVelocity = moveDirection.clone().multiplyScalar(SPEED)
+    api.velocity.set(targetVelocity.x, velocity.current[1], targetVelocity.z)
+
+    // 3. Jump
     if (keys.current.jump && canJump.current) {
       api.velocity.set(velocity.current[0], JUMP_FORCE, velocity.current[2])
       canJump.current = false
     }
 
-    // 3. Rotate the Cat mesh to face movement direction
-    if (catMeshRef.current && (moveX !== 0 || moveZ !== 0)) {
-      // Calculate target angle
-      const targetAngle = Math.atan2(direction.x, direction.z)
-      
-      // Smooth rotation (slerp equivalent for eulery Y)
+    // 4. Rotate the Cat mesh to face movement direction
+    const isMovingLocally = moveDirection.lengthSq() > 0;
+    isMovingRef.current = isMovingLocally && Math.abs(velocity.current[1]) < 0.2; // Only dust when moving on ground
+
+    if (catMeshRef.current && isMovingLocally) {
+      const targetAngle = Math.atan2(moveDirection.x, moveDirection.z)
+
+      // Snappy but slight smoothing for rotation
       let currentAngle = catMeshRef.current.rotation.y
-      
-      // Normalize angle difference to take shortest path
       let diff = targetAngle - currentAngle
       while (diff < -Math.PI) diff += Math.PI * 2
       while (diff > Math.PI) diff -= Math.PI * 2
 
-      catMeshRef.current.rotation.y += diff * 10 * delta
+      catMeshRef.current.rotation.y += diff * 15 * delta
     }
 
-    // 4. Update Third-Person Camera
-    // Follow target is the player's position
+    // 5. Update Third-Person Camera Elastic Follow
     cameraTarget.set(position.current[0], position.current[1] + 1, position.current[2])
 
-    // Desired camera position (behind and above)
-    // You can tweak these offsets to change the perspective
-    const offset = new THREE.Vector3(0, 6, 12) 
+    // Spherical coordinates for orbit
+    const springArmLength = 12
+    const offsetX = springArmLength * Math.sin(yaw.current) * Math.cos(pitch.current)
+    const offsetY = springArmLength * Math.sin(pitch.current)
+    const offsetZ = springArmLength * Math.cos(yaw.current) * Math.cos(pitch.current)
+
+    const offset = new THREE.Vector3(offsetX, offsetY, offsetZ)
     const desiredPos = cameraTarget.clone().add(offset)
 
-    // Smoothly interpolate camera position
-    cameraPosition.lerp(desiredPos, 5 * delta)
-    state.camera.position.copy(cameraPosition)
-    
-    // Look at player
+    // Smoothly follow
+    state.camera.position.lerp(desiredPos, 0.1)
     state.camera.lookAt(cameraTarget)
   })
 
@@ -118,7 +172,7 @@ export default function Player({ setPlayerPosition }) {
           <boxGeometry args={[0.5, 0.4, 0.8]} />
           <meshToonMaterial color="#e6a46e" />
         </mesh>
-        
+
         {/* Head */}
         <mesh position={[0, 0.8, 0.4]} castShadow>
           <boxGeometry args={[0.5, 0.4, 0.5]} />
@@ -155,6 +209,8 @@ export default function Player({ setPlayerPosition }) {
           <meshBasicMaterial color="#ff7b7b" />
         </mesh>
       </group>
+
+      <DustParticles playerMeshRef={catMeshRef} activeRef={isMovingRef} />
     </mesh>
   )
 }

@@ -1,110 +1,130 @@
 'use client'
 
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
 
-/**
- * Renders thousands of grass blades efficiently.
- * Swaying is applied via a custom vertex shader in the material.
- */
-export default function Grass({ count = 10000, bounds = 100 }) {
-  const materialRef = useRef()
+// We create a shared custom material definition so we don't compile 25 different shaders
+const GrassMaterial = new THREE.MeshToonMaterial({
+  color: '#4ade80' // default, but we'll use instanceColor
+})
 
-  // Generate random data for each grass blade once
-  const grassData = useMemo(() => {
-    return Array.from({ length: count }, () => {
-      // Random position within a circular/square bounds
-      const angle = Math.random() * Math.PI * 2
-      const radius = Math.random() * bounds
+const customUniforms = { time: { value: 0 } }
+
+GrassMaterial.onBeforeCompile = (shader) => {
+  shader.uniforms.time = customUniforms.time
+  shader.vertexShader = `
+    uniform float time;
+    ${shader.vertexShader}
+  `.replace(
+    `#include <begin_vertex>`,
+    `
+    #include <begin_vertex>
+    // Get world position roughly based on instance matrix translation
+    float offset = instanceMatrix[3][0] + instanceMatrix[3][2];
+    
+    // Only sway the upper parts of the geometry (position.y > 0)
+    float swayX = sin(time * 2.0 + offset * 0.5) * 0.15;
+    float swayZ = cos(time * 1.5 + offset * 0.4) * 0.15;
+    
+    transformed.x += swayX * position.y;
+    transformed.z += swayZ * position.y;
+    `
+  )
+}
+
+function GrassChunk({ data, geometry }) {
+  const meshRef = useRef()
+
+  useEffect(() => {
+    if (!meshRef.current) return
+    const dummy = new THREE.Object3D()
+    const colorDummy = new THREE.Color()
+
+    data.forEach((blade, i) => {
+      dummy.position.set(blade.position[0], blade.position[1], blade.position[2])
+      dummy.rotation.set(blade.rotation[0], blade.rotation[1], blade.rotation[2])
+      dummy.scale.set(blade.scale[0], blade.scale[1], blade.scale[2])
+      dummy.updateMatrix()
+      meshRef.current.setMatrixAt(i, dummy.matrix)
       
-      const x = Math.cos(angle) * radius
-      const z = Math.sin(angle) * radius
-      
-      // Keep x, z close to floor. Y should be 0 (base of grass).
-      // Random rotation so they don't all face the same way
-      const rotationY = Math.random() * Math.PI * 2
-
-      // Slight scale variations
-      const scale = 0.5 + Math.random() * 0.8
-
-      // Determine a slight green hue variation
-      const hueVariations = ['#4ade80', '#22c55e', '#16a34a', '#86efac']
-      const color = hueVariations[Math.floor(Math.random() * hueVariations.length)]
-
-      return {
-        position: [x, 0, z],
-        rotation: [0, rotationY, 0],
-        scale: [scale, scale, scale],
-        color: color,
-      }
+      colorDummy.set(blade.color)
+      meshRef.current.setColorAt(i, colorDummy)
     })
-  }, [count, bounds])
+    
+    meshRef.current.instanceMatrix.needsUpdate = true
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true
+    
+    // Compute bounding sphere for frustum culling
+    meshRef.current.computeBoundingSphere()
+  }, [data])
 
-  // Update the shader time uniform for smooth continuous swaying
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[geometry, GrassMaterial, data.length]}
+      castShadow
+      receiveShadow
+      frustumCulled={true} // ENABLES true frustum culling per chunk!
+    />
+  )
+}
+
+export default function Grass({ count = 15000, bounds = 100 }) {
   useFrame((state) => {
-    if (materialRef.current?.uniforms?.time) {
-      materialRef.current.uniforms.time.value = state.clock.getElapsedTime()
-    }
+    customUniforms.time.value = state.clock.getElapsedTime()
   })
 
   // Geometry shifted so bottom is exactly at y=0.
-  // This is critical so the vertex shader sway calculation (which relies on position.y) 
-  // only affects the top of the grass blade and leaves the base pinned to the ground.
   const geometry = useMemo(() => {
     const geo = new THREE.ConeGeometry(0.05, 0.4, 3)
-    // Translate up by half height so the pivot is at the bottom
     geo.translate(0, 0.2, 0)
     return geo
   }, [])
 
+  // Divide map into 8x8 grid (64 chunks) for excellent culling granularity
+  const gridSize = 8
+  const chunkSize = (bounds * 2) / gridSize
+  const halfBounds = bounds
+
+  const chunks = useMemo(() => {
+    const grid = new Map()
+
+    for (let i = 0; i < count; i++) {
+      // Random position within full circular bounds roughly
+      const angle = Math.random() * Math.PI * 2
+      const radius = Math.random() * bounds
+      const x = Math.cos(angle) * radius
+      const z = Math.sin(angle) * radius
+      
+      // Determine which grid cell this blade belongs to
+      const gridX = Math.floor((x + halfBounds) / chunkSize)
+      const gridZ = Math.floor((z + halfBounds) / chunkSize)
+      const key = `${gridX}-${gridZ}`
+
+      if (!grid.has(key)) grid.set(key, [])
+
+      const rotationY = Math.random() * Math.PI * 2
+      const scale = 0.5 + Math.random() * 0.8
+      const hueVariations = ['#4ade80', '#22c55e', '#16a34a', '#86efac']
+      const color = hueVariations[Math.floor(Math.random() * hueVariations.length)]
+
+      grid.get(key).push({
+        position: [x, 0, z],
+        rotation: [0, rotationY, 0],
+        scale: [scale, scale, scale],
+        color: color,
+      })
+    }
+
+    return Array.from(grid.values())
+  }, [count, bounds, chunkSize, halfBounds])
+
   return (
-    <group position={[0, 0, 0]}>
-      {/* We use a simple 3-vert triangle (cone) for the grass blade */}
-      <Instances
-        limit={count}
-        castShadow
-        receiveShadow
-        geometry={geometry}
-      >
-        <meshToonMaterial
-          customProgramCacheKey={() => 'grassShader'}
-          onBeforeCompile={(shader) => {
-            shader.uniforms.time = { value: 0 }
-            materialRef.current = shader
-            // Inject vertex sway logic
-            shader.vertexShader = `
-              uniform float time;
-              ${shader.vertexShader}
-            `.replace(
-              `#include <begin_vertex>`,
-              `
-              #include <begin_vertex>
-              // Get world position roughly based on instance matrix translation
-              float offset = instanceMatrix[3][0] + instanceMatrix[3][2];
-              
-              // Only sway the upper parts of the geometry (position.y > 0)
-              // This is why we translated the geometry earlier.
-              float swayX = sin(time * 2.0 + offset * 0.5) * 0.15;
-              float swayZ = cos(time * 1.5 + offset * 0.4) * 0.15;
-              
-              transformed.x += swayX * position.y;
-              transformed.z += swayZ * position.y;
-              `
-            )
-          }}
-        />
-        {grassData.map((data, i) => (
-          <Instance
-            key={i}
-            color={data.color}
-            position={data.position}
-            rotation={data.rotation}
-            scale={data.scale}
-          />
-        ))}
-      </Instances>
+    <group>
+      {chunks.map((chunkData, index) => (
+        <GrassChunk key={index} data={chunkData} geometry={geometry} />
+      ))}
     </group>
   )
 }
