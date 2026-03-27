@@ -20,13 +20,17 @@ export default function Player({ setPlayerPosition }) {
   const pitch = useRef(0.2) // Start slightly angled down
 
   useEffect(() => {
+    const isTouch = useUIStore.getState().isTouch
+
     const handleMouseClick = () => {
+      if (isTouch) return
       if (document.pointerLockElement !== gl.domElement) {
         gl.domElement.requestPointerLock()
       }
     }
 
     const handleMouseMove = (e) => {
+      if (isTouch) return
       if (document.pointerLockElement === gl.domElement) {
         const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0
         const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0
@@ -103,8 +107,22 @@ export default function Player({ setPlayerPosition }) {
     sideVector.normalize()
 
     // Inputs
-    const forwardInput = (keys.current.forward ? 1 : 0) - (keys.current.backward ? 1 : 0)
-    const sideInput = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0)
+    const { moveJoystick, lookJoystick, isJumping } = useUIStore.getState()
+    
+    // Combine Keyboard + Joystick
+    const forwardInput = (keys.current.forward ? 1 : 0) - (keys.current.backward ? 1 : 0) + moveJoystick.y
+    const sideInput = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0) + moveJoystick.x
+
+    // Handle Look Joystick (Right Joystick)
+    if (Math.abs(lookJoystick.x) > 0.01 || Math.abs(lookJoystick.y) > 0.01) {
+      // Sensitivity for joystick look
+      const lookSense = 0.05
+      yaw.current -= lookJoystick.x * lookSense
+      pitch.current += lookJoystick.y * lookSense // lookJoystick.y was inverted in component, so += here
+
+      const PI_2 = Math.PI / 2
+      pitch.current = Math.max(-0.1, Math.min(PI_2 - 0.1, pitch.current))
+    }
 
     // Calculate final direction
     moveDirection
@@ -118,7 +136,8 @@ export default function Player({ setPlayerPosition }) {
     api.velocity.set(targetVelocity.x, velocity.current[1], targetVelocity.z)
 
     // 3. Jump
-    if (keys.current.jump && canJump.current) {
+    // 3. Jump
+    if ((keys.current.jump || isJumping) && canJump.current) {
       api.velocity.set(velocity.current[0], JUMP_FORCE, velocity.current[2])
       canJump.current = false
     }

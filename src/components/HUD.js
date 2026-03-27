@@ -1,13 +1,23 @@
-'use client'
-
 import { useState, useEffect } from 'react'
+import useUIStore from '@/store/useUIStore'
+import Joystick from './Joystick'
 
 /**
  * HUD overlay – crosshair, energy bar, project counter, zone indicator.
  * Positioned absolutely over the canvas with Tailwind.
  */
 export default function HUD({ scannedCount, totalCount, currentZone, isFiring }) {
+  const { isTouch, setIsTouch, setMoveJoystick, setLookJoystick } = useUIStore()
   const [crosshairPulse, setCrosshairPulse] = useState(false)
+
+  useEffect(() => {
+    // Basic touch detection
+    const checkTouch = () => {
+      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0)
+    }
+    checkTouch()
+    window.addEventListener('touchstart', () => setIsTouch(true), { once: true })
+  }, [setIsTouch])
 
   useEffect(() => {
     if (isFiring) {
@@ -98,11 +108,54 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
       </div>
 
       {/* ===== BOTTOM CENTER: Quick Controls Hint ===== */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass px-6 py-2 rounded-full border border-white/60 shadow-sm">
-        <span className="text-[11px] text-[#2c3e50] font-bold tracking-widest">
-          WASD MOVE &nbsp;•&nbsp; CLICK INTERACT &nbsp;•&nbsp; ESC MENU
-        </span>
-      </div>
+      {!isTouch && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 glass px-6 py-2 rounded-full border border-white/60 shadow-sm">
+          <span className="text-[11px] text-[#2c3e50] font-bold tracking-widest text-center px-4">
+            WASD MOVE &nbsp;•&nbsp; CLICK INTERACT &nbsp;•&nbsp; ESC MENU
+          </span>
+        </div>
+      )}
+
+      {/* ===== TOUCH CONTROLS ===== */}
+      {isTouch && (
+        <>
+          {/* Left Joystick: Movement */}
+          <div className="absolute bottom-16 left-12 pointer-events-auto">
+            <Joystick 
+              label="Movement" 
+              onMove={(x, y) => setMoveJoystick(x, y)} 
+            />
+          </div>
+
+          {/* Right Joystick: Look */}
+          <div className="absolute bottom-16 right-12 pointer-events-auto">
+            <Joystick 
+              label="Look Around" 
+              onMove={(x, y) => setLookJoystick(x, y)} 
+            />
+          </div>
+
+          {/* Jump Button (Top right above Look joystick) */}
+          <div className="absolute bottom-56 right-16 pointer-events-auto">
+            <button 
+              className="w-16 h-16 rounded-full glass border border-white/40 flex items-center justify-center active:scale-90 transition-transform shadow-lg"
+              onPointerDown={() => {
+                // We'll handle jump in Player.js by checking this button state
+                // Or we can simulate a spacebar press if needed, 
+                // but better to add a jump state in the store.
+                useUIStore.setState({ isJumping: true })
+              }}
+              onPointerUp={() => {
+                 useUIStore.setState({ isJumping: false })
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2c3e50" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5M5 12l7-7 7 7"/>
+              </svg>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
