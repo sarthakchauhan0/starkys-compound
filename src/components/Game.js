@@ -11,6 +11,8 @@ import Map from './Map'
 import CardOverlay from './CardOverlay'
 import IntroScreen from './IntroScreen'
 import SceneLights from './SceneLights'
+import HUD from './HUD'
+import useUIStore from '@/store/useUIStore'
 
 import { websiteProjects, dataProjects, skills, bossData } from '@/data/projects'
 import { useAudioEffects } from '@/hooks/useAudioEffects'
@@ -100,12 +102,13 @@ export default function Game() {
           </Suspense>
         </Canvas>
         
-        {/* Simple constant overlay HUD instructions */}
-        <div className="absolute top-8 left-8 p-4 bg-white/50 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm pointer-events-none">
-          <p className="text-[#2c3e50] font-bold text-sm">WASD to Move</p>
-          <p className="text-[#2c3e50] font-bold text-sm mt-1">SPACE to Jump</p>
-          <p className="text-[#5a6c7d] font-bold text-[10px] mt-2 tracking-widest uppercase">Jump on a button to view!</p>
-        </div>
+        {/* HUD Overlay (Crosshair, Joysticks, Info) */}
+        <HUD 
+          scannedCount={0} 
+          totalCount={0} 
+          currentZone="THE COMPOUND" 
+          isFiring={false} 
+        />
       </div>
 
       {/* Pop-up Card Overlay */}

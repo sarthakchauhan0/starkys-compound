@@ -7,16 +7,21 @@ import Joystick from './Joystick'
  * Positioned absolutely over the canvas with Tailwind.
  */
 export default function HUD({ scannedCount, totalCount, currentZone, isFiring }) {
-  const { isTouch, setIsTouch, setMoveJoystick, setLookJoystick } = useUIStore()
+  const { isTouch, setIsTouch, setMoveJoystick, setLookJoystick, setIsJumping } = useUIStore()
   const [crosshairPulse, setCrosshairPulse] = useState(false)
 
   useEffect(() => {
     // Basic touch detection
     const checkTouch = () => {
-      setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0)
+      const isTouchDev = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches
+      setIsTouch(isTouchDev)
     }
     checkTouch()
-    window.addEventListener('touchstart', () => setIsTouch(true), { once: true })
+    
+    // Fallback: if we see a touch event, it's definitely touch
+    const onTouch = () => setIsTouch(true)
+    window.addEventListener('touchstart', onTouch, { once: true })
+    return () => window.removeEventListener('touchstart', onTouch)
   }, [setIsTouch])
 
   useEffect(() => {
@@ -139,15 +144,9 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
           <div className="absolute bottom-56 right-16 pointer-events-auto">
             <button 
               className="w-16 h-16 rounded-full glass border border-white/40 flex items-center justify-center active:scale-90 transition-transform shadow-lg"
-              onPointerDown={() => {
-                // We'll handle jump in Player.js by checking this button state
-                // Or we can simulate a spacebar press if needed, 
-                // but better to add a jump state in the store.
-                useUIStore.setState({ isJumping: true })
-              }}
-              onPointerUp={() => {
-                 useUIStore.setState({ isJumping: false })
-              }}
+              onPointerDown={() => setIsJumping(true)}
+              onPointerUp={() => setIsJumping(false)}
+              onPointerCancel={() => setIsJumping(false)}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2c3e50" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 19V5M5 12l7-7 7 7"/>

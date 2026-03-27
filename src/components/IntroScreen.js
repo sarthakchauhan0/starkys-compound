@@ -1,6 +1,6 @@
-'use client'
-
 import { useState, useEffect } from 'react'
+import useUIStore from '@/store/useUIStore'
+import Joystick from './Joystick'
 
 /**
  * IntroScreen – full-screen overlay before pointer lock.
@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
  */
 export default function IntroScreen({ onEnter }) {
   const [pulse, setPulse] = useState(false)
+  const isTouch = useUIStore((state) => state.isTouch)
 
   useEffect(() => {
     const interval = setInterval(() => setPulse((p) => !p), 1200)
@@ -63,21 +64,41 @@ export default function IntroScreen({ onEnter }) {
 
       {/* Controls guide */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-2xl px-4">
-        {[
-          { key: 'W A S D', action: 'WALK' },
-          { key: 'MOUSE', action: 'LOOK' },
-          { key: 'CLICK', action: 'INTERACT' },
-          { key: 'ESC', action: 'MENU' },
-        ].map((control) => (
-          <div key={control.key} className="text-center bg-white/40 p-4 rounded-xl shadow-sm border border-white/50 backdrop-blur-sm">
-            <div className="rounded px-4 py-2 mb-2 bg-[#f0e68c]/30 border border-[#f0e68c]/60">
-              <span className="text-[#2c3e50] text-sm font-bold">{control.key}</span>
+        {isTouch ? (
+          <>
+            {[
+              { key: 'JOY L', action: 'MOVE' },
+              { key: 'JOY R', action: 'LOOK' },
+              { key: 'TAP', action: 'INTERACT' },
+              { key: 'BUTTON', action: 'JUMP' },
+            ].map((control) => (
+              <div key={control.key} className="text-center bg-white/40 p-4 rounded-xl shadow-sm border border-white/50 backdrop-blur-sm">
+                <div className="rounded px-4 py-1 mb-2 bg-[#f0e68c]/30 border border-[#f0e68c]/60">
+                  <span className="text-[#2c3e50] text-xs font-bold">{control.key}</span>
+                </div>
+                <span className="text-[#5a6c7d] text-[10px] font-bold tracking-[0.1em]">
+                  {control.action}
+                </span>
+              </div>
+            ))}
+          </>
+        ) : (
+          [
+            { key: 'W A S D', action: 'WALK' },
+            { key: 'MOUSE', action: 'LOOK' },
+            { key: 'CLICK', action: 'INTERACT' },
+            { key: 'ESC', action: 'MENU' },
+          ].map((control) => (
+            <div key={control.key} className="text-center bg-white/40 p-4 rounded-xl shadow-sm border border-white/50 backdrop-blur-sm">
+              <div className="rounded px-4 py-2 mb-2 bg-[#f0e68c]/30 border border-[#f0e68c]/60">
+                <span className="text-[#2c3e50] text-sm font-bold">{control.key}</span>
+              </div>
+              <span className="text-[#5a6c7d] text-[12px] font-bold tracking-[0.1em]">
+                {control.action}
+              </span>
             </div>
-            <span className="text-[#5a6c7d] text-[12px] font-bold tracking-[0.1em]">
-              {control.action}
-            </span>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Bottom text */}

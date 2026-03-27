@@ -14,14 +14,16 @@ const JUMP_FORCE = 8
 export default function Player({ setPlayerPosition }) {
   const keys = usePlayerControls()
   const canJump = useRef(true)
+  const isTouch = useUIStore((state) => state.isTouch)
+  const moveJoystick = useUIStore((state) => state.moveJoystick)
+  const lookJoystick = useUIStore((state) => state.lookJoystick)
+  const isJumping = useUIStore((state) => state.isJumping)
 
   const { gl } = useThree()
   const yaw = useRef(0)
   const pitch = useRef(0.2) // Start slightly angled down
 
   useEffect(() => {
-    const isTouch = useUIStore.getState().isTouch
-
     const handleMouseClick = () => {
       if (isTouch) return
       if (document.pointerLockElement !== gl.domElement) {
@@ -50,7 +52,7 @@ export default function Player({ setPlayerPosition }) {
       gl.domElement.removeEventListener('click', handleMouseClick)
       document.removeEventListener('mousemove', handleMouseMove)
     }
-  }, [gl.domElement])
+  }, [gl.domElement, isTouch])
 
   // Physics body – sphere allows smooth rolling/sliding over terrain
   const [ref, api] = useSphere(() => ({
@@ -106,17 +108,16 @@ export default function Player({ setPlayerPosition }) {
     frontVector.normalize()
     sideVector.normalize()
 
-    // Inputs
-    const { moveJoystick, lookJoystick, isJumping } = useUIStore.getState()
+    // Inputs (Joystick values are already reactive via hooks)
     
     // Combine Keyboard + Joystick
     const forwardInput = (keys.current.forward ? 1 : 0) - (keys.current.backward ? 1 : 0) + moveJoystick.y
     const sideInput = (keys.current.right ? 1 : 0) - (keys.current.left ? 1 : 0) + moveJoystick.x
 
     // Handle Look Joystick (Right Joystick)
-    if (Math.abs(lookJoystick.x) > 0.01 || Math.abs(lookJoystick.y) > 0.01) {
+    if (isTouch && (Math.abs(lookJoystick.x) > 0.01 || Math.abs(lookJoystick.y) > 0.01)) {
       // Sensitivity for joystick look
-      const lookSense = 0.05
+      const lookSense = 0.04
       yaw.current -= lookJoystick.x * lookSense
       pitch.current += lookJoystick.y * lookSense // lookJoystick.y was inverted in component, so += here
 
