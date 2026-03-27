@@ -34,13 +34,9 @@ export default function Road({ curve }) {
       const p = points[i].clone()
       p.y = 0.05 // Force y coordinate to exactly 0.05
       
-      // Calculate tangent
-      let tangent
-      if (i < points.length - 1) {
-        tangent = points[i+1].clone().sub(p).normalize()
-      } else {
-        tangent = p.clone().sub(points[i-1]).normalize()
-      }
+      // Calculate tangent using the curve's built-in method (handles closed loops better)
+      const t = i / segments
+      const tangent = curve.getTangentAt(t).normalize()
       
       const normal = new THREE.Vector3(0, 1, 0)
       const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize()

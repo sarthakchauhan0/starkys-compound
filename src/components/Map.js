@@ -31,24 +31,29 @@ export default function Map() {
   const roadCurve = useMemo(() => {
     const points = [
       new THREE.Vector3(0, 0.1, 30),
-      new THREE.Vector3(-10, 0.1, 15),
-      new THREE.Vector3(-25, 0.1, -5), // Path to Projects
-      new THREE.Vector3(-2, 0.1, -10), // Loops back mid
-      new THREE.Vector3(-2, 0.1, -20), // Path to Skills
-      new THREE.Vector3(15, 0.1, -15), 
-      new THREE.Vector3(25, 0.1, -12), // Path to Boss/Contact
+      new THREE.Vector3(-25, 0.1, 20),
+      new THREE.Vector3(-35, 0.1, 0),
+      new THREE.Vector3(-25, 0.1, -25),
+      new THREE.Vector3(0, 0.1, -35),
+      new THREE.Vector3(30, 0.1, -25),
+      new THREE.Vector3(45, 0.1, 0),
+      new THREE.Vector3(30, 0.1, 25),
     ]
-    return new THREE.CatmullRomCurve3(points)
+    return new THREE.CatmullRomCurve3(points, true) // Closed loop
   }, [])
 
   // 4. Calculate proper placements for Houses along the road
   // We place houses at specific 't' parameter along the spline (0 to 1)
   const houses = useMemo(() => {
     const configs = [
-      { t: 0.2, data: { title: 'About Me', description: 'Enter the cottage to learn my story.', color: '#ff7b7b' } },
-      { t: 0.45, data: { title: 'Projects Archive', description: 'Review my past works and experiments.', color: '#4ba3e3' } },
-      { t: 0.7, data: { title: 'Abilities & Tools', description: 'My technical stack and competencies.', type: 'skill', color: '#f1c40f' } },
-      { t: 0.9, data: { ...bossData, title: 'Contact HQ', type: 'boss', color: '#2c3e50' } },
+      { t: 0.0, data: { title: 'About Me', description: 'Experience my journey and vision.', color: '#ff7b7b' } },
+      { t: 0.125, data: websiteProjects[0] },
+      { t: 0.25, data: websiteProjects[1] },
+      { t: 0.375, data: { title: 'Projects Archive', description: 'Review my past works and experiments.', color: '#4ba3e3' } },
+      { t: 0.5, data: dataProjects[0] },
+      { t: 0.625, data: { title: 'Abilities & Tools', description: 'My technical stack and competencies.', type: 'skill', color: '#f1c40f' } },
+      { t: 0.75, data: dataProjects[1] },
+      { t: 0.875, data: { ...bossData, title: 'Contact HQ', type: 'boss', color: '#2c3e50' } },
     ]
 
     return configs.map((conf) => {
