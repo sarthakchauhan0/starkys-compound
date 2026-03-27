@@ -41,15 +41,7 @@ export default function DoorTrigger({ position, projectData }) {
     }
   })
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.code === 'Enter' && isNearby && !useUIStore.getState().isCardOpen) {
-        openCard(projectData)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isNearby, projectData, openCard])
+  // The keydown listener has been moved to HUD.js for centralized interaction handling.
 
   return (
     <group ref={triggerRef} position={position}>

@@ -32,6 +32,20 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
     }
   }, [isFiring])
 
+  // Centralized keyboard interaction for houses
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'Enter') {
+        const { nearbyHouseData, isCardOpen, openCard } = useUIStore.getState()
+        if (nearbyHouseData && !isCardOpen) {
+          openCard(nearbyHouseData)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <div className="fixed inset-0 pointer-events-none z-30 select-none">
       {/* ===== TOP LEFT: Zone Indicator ===== */}
