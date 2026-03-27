@@ -43,7 +43,7 @@ export default function DoorTrigger({ position, projectData }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' && isNearby && !useUIStore.getState().isCardOpen) {
+      if (e.code === 'Enter' && isNearby && !useUIStore.getState().isCardOpen) {
         openCard(projectData)
       }
     }
@@ -61,13 +61,18 @@ export default function DoorTrigger({ position, projectData }) {
         distanceFactor={15}
         zIndexRange={[100, 0]}
       >
-        <div className={`transition-all duration-300 ${isCardOpen || !isNearby ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}>
-          <div className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-[#2c3e50]/10 flex flex-col items-center pointer-events-none">
+        <div 
+          className={`transition-all duration-300 ${isCardOpen || !isNearby ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
+          onClick={() => {
+            if (isNearby) openCard(projectData)
+          }}
+        >
+          <div className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-[#2c3e50]/10 flex flex-col items-center cursor-pointer active:scale-95 pointer-events-auto">
              <span className="text-[12px] font-bold tracking-widest text-[#2c3e50] uppercase whitespace-nowrap">
                {projectData.title || projectData.name}
              </span>
              <div className="flex items-center gap-1.5 mt-1.5">
-               <span className="bg-[#2c3e50] text-white text-[9px] px-1.5 py-0.5 rounded font-bold self-start">[SPACE]</span>
+               <span className="bg-[#2c3e50] text-white text-[9px] px-1.5 py-0.5 rounded font-bold self-start">[ENTER]</span>
                <span className="text-[10px] font-bold text-[#e74c3c] uppercase">to Enter</span>
              </div>
           </div>

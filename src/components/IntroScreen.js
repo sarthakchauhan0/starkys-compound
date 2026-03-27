@@ -86,7 +86,7 @@ export default function IntroScreen({ onEnter }) {
           [
             { key: 'W A S D', action: 'WALK' },
             { key: 'MOUSE', action: 'LOOK' },
-            { key: 'CLICK', action: 'INTERACT' },
+            { key: 'ENTER', action: 'HOUSE' },
             { key: 'ESC', action: 'MENU' },
           ].map((control) => (
             <div key={control.key} className="text-center bg-white/40 p-4 rounded-xl shadow-sm border border-white/50 backdrop-blur-sm">
