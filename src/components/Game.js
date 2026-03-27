@@ -3,7 +3,6 @@
 import { useState, useRef, useMemo, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Physics } from '@react-three/cannon'
-import { Environment } from '@react-three/drei'
 import { EffectComposer, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing'
 
 import Player from './Player'
@@ -82,7 +81,7 @@ export default function Game() {
           <Suspense fallback={null}>
             {/* Ghibli Lighting */}
             <SceneLights />
-            <Environment preset="forest" />
+
 
             {/* Physics World */}
             <Physics gravity={[0, -15, 0]}>
