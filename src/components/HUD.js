@@ -36,9 +36,19 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Enter') {
-        const { nearbyHouseData, isCardOpen, openCard } = useUIStore.getState()
-        if (nearbyHouseData && !isCardOpen) {
-          openCard(nearbyHouseData)
+        const { nearbyHouseData, isInsideHouse, enterHouse } = useUIStore.getState()
+        if (nearbyHouseData && !isInsideHouse) {
+          enterHouse()
+        }
+      }
+      if (e.code === 'Escape') {
+        const { isInsideHouse, isCardOpen, leaveHouse, closeCard } = useUIStore.getState()
+        if (isInsideHouse && !isCardOpen) {
+          leaveHouse()
+          // Re-lock pointer after slight delay to ensure browser focus
+          setTimeout(() => {
+            document.querySelector('canvas')?.requestPointerLock()
+          }, 100)
         }
       }
     }
@@ -109,11 +119,11 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
           </div>
 
           {/* Enter House Button (Appears when nearby) */}
-          {nearbyHouseData && (
+          {nearbyHouseData && !useUIStore.getState().isInsideHouse && (
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 pointer-events-auto">
               <button 
                 className="px-8 py-4 rounded-full glass border border-white/60 bg-white/20 flex items-center gap-3 active:scale-95 transition-all shadow-2xl backdrop-blur-xl"
-                onPointerDown={() => openCard(nearbyHouseData)}
+                onPointerDown={() => useUIStore.getState().enterHouse()}
               >
                 <div className="w-2 h-2 rounded-full bg-[#ffb7b2] animate-pulse" />
                 <span className="text-[#2c3e50] font-black text-sm tracking-[0.2em] uppercase">

@@ -3,6 +3,7 @@
 import { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
+import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import * as THREE from 'three'
 import useUIStore from '@/store/useUIStore'
 
@@ -13,38 +14,33 @@ import useUIStore from '@/store/useUIStore'
 export default function DoorTrigger({ position, projectData }) {
   const { isCardOpen, openCard, setNearbyHouse, nearbyHouseData } = useUIStore()
   const triggerRef = useRef()
-  const worldPos = useMemo(() => new THREE.Vector3(), [])
-  
   const isNearby = nearbyHouseData?.id === projectData?.id || nearbyHouseData?.title === projectData?.title
-
-  useFrame(() => {
-    if (!triggerRef.current || useUIStore.getState().isCardOpen) return
-    
-    triggerRef.current.getWorldPosition(worldPos)
-    const playerPos = useUIStore.getState().playerPosRef.current
-    
-    // Real-time distance checking (XZ plane)
-    const dx = playerPos[0] - worldPos.x
-    const dz = playerPos[2] - worldPos.z
-    const distSq = dx * dx + dz * dz
-    
-    const store = useUIStore.getState()
-    // 4 units radius = 16 distance squared
-    if (distSq < 16) {
-      if (store.nearbyHouseData?.title !== projectData.title) {
-        store.setNearbyHouse(projectData)
-      }
-    } else {
-      if (store.nearbyHouseData?.title === projectData.title) {
-        store.setNearbyHouse(null)
-      }
-    }
-  })
 
   // The keydown listener has been moved to HUD.js for centralized interaction handling.
 
   return (
     <group ref={triggerRef} position={position}>
+      <RigidBody type="fixed" colliders={false}>
+        <CuboidCollider 
+          args={[1.5, 1.5, 1.5]} 
+          sensor 
+          onIntersectionEnter={(e) => {
+            if (e.other && e.other.rigidBodyObject?.name === 'playerBody') {
+              useUIStore.getState().setNearbyHouse(projectData)
+            } else if (!e.other.rigidBodyObject) {
+              useUIStore.getState().setNearbyHouse(projectData)
+            }
+          }}
+          onIntersectionExit={(e) => {
+            if (e.other && (e.other.rigidBodyObject?.name === 'playerBody' || !e.other.rigidBodyObject)) {
+              const store = useUIStore.getState()
+              if (store.nearbyHouseData?.title === projectData.title) {
+                store.setNearbyHouse(null)
+              }
+            }
+          }} 
+        />
+      </RigidBody>
       {/* Floating Entry Prompt */}
       {/* The HTML is only visible if the card is NOT open and the player is nearby */}
       <Html
@@ -56,7 +52,7 @@ export default function DoorTrigger({ position, projectData }) {
         <div 
           className={`transition-all duration-300 ${isCardOpen || !isNearby ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
           onClick={() => {
-            if (isNearby) openCard(projectData)
+            if (isNearby) useUIStore.getState().enterHouse()
           }}
         >
           <div className="px-4 py-2 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-[#2c3e50]/10 flex flex-col items-center cursor-pointer active:scale-95 pointer-events-auto">

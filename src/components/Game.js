@@ -2,11 +2,12 @@
 
 import { useState, useRef, useMemo, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Physics } from '@react-three/cannon'
+import { Physics } from '@react-three/rapier'
 import { EffectComposer, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing'
 
 import Player from './Player'
 import Map from './Map'
+import InteriorCompound from './InteriorCompound'
 import CardOverlay from './CardOverlay'
 import IntroScreen from './IntroScreen'
 import SceneLights from './SceneLights'
@@ -22,6 +23,7 @@ import { useAudioEffects } from '@/hooks/useAudioEffects'
  */
 export default function Game() {
   const [started, setStarted] = useState(false)
+  const sceneZone = useUIStore((state) => state.sceneZone)
   
   // Track player position for zone detection (optional but good for future triggers)
   const playerPos = useRef([0, 2, 0])
@@ -88,8 +90,8 @@ export default function Game() {
               {/* Third Person Player */}
               <Player />
 
-              {/* Map (Ground, Roads, Houses, Grass) */}
-              <Map />
+              {/* Map Layout vs Interior Layout */}
+              {sceneZone === 'EXTERIOR' ? <Map /> : <InteriorCompound />}
             </Physics>
 
             {/* Post-Processing */}

@@ -2,18 +2,15 @@
 
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { useBox } from '@react-three/cannon'
+import { RigidBody, CuboidCollider } from '@react-three/rapier'
 
 // An invisible physics box for one segment of the road
 function RoadSegment({ position, rotation, args }) {
-  useBox(() => ({
-    type: 'Static',
-    position,
-    rotation,
-    args,
-    material: { friction: 0.1 }
-  }))
-  return null
+  return (
+    <RigidBody type="fixed" position={position} rotation={rotation} friction={0.1}>
+      <CuboidCollider args={[args[0] / 2, args[1] / 2, args[2] / 2]} />
+    </RigidBody>
+  )
 }
 
 /**

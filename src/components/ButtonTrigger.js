@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useCylinder } from '@react-three/cannon'
+import { RigidBody, CylinderCollider } from '@react-three/rapier'
 import { Html } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import useUIStore from '@/store/useUIStore'
@@ -15,57 +15,50 @@ export default function ButtonTrigger({ position, projectData, color = '#ff7b7b'
   const pressTimeout = useRef(null)
   const openCard = useUIStore((state) => state.openCard)
 
-  // A flat cylinder for the button base
-  const [baseRef] = useCylinder(() => ({
-    type: 'Static',
-    position: [position[0], position[1] + 0.1, position[2]],
-    args: [1, 1, 0.2, 16],
-  }))
-
-  // The actual pressable button part
-  const [buttonRef] = useCylinder(() => ({
-    type: 'Static',
-    position: [position[0], position[1] + 0.3, position[2]],
-    args: [0.8, 0.8, 0.2, 16],
-    isTrigger: true, // We want to detect overlap, not physically stop the player perfectly
-    onCollide: (e) => {
-      if (!isPressed) {
-        setIsPressed(true)
-        openCard(projectData)
-        
-        // Reset button visual after a few seconds
-        clearTimeout(pressTimeout.current)
-        pressTimeout.current = setTimeout(() => {
-          setIsPressed(false)
-        }, 3000)
-      }
-    }
-  }))
-
+  const buttonMeshRef = useRef()
   const visualY = useRef(0.3)
   
   // Animate the button pressing down visually
   useFrame(() => {
     const targetY = isPressed ? 0.15 : 0.3
     visualY.current += (targetY - visualY.current) * 0.2
-    if (buttonRef.current) {
-        // We only animate the visual mesh relative to its physics body position 
-        // to keep it simple, or we can just animate the mesh directly.
-        // Since useCylinder controls the mesh position entirely, we'll apply a local offset to the geometry.
-        buttonRef.current.position.y = position[1] + visualY.current
+    if (buttonMeshRef.current) {
+        buttonMeshRef.current.position.y = position[1] + visualY.current
     }
   })
 
   return (
     <group>
       {/* Base */}
-      <mesh ref={baseRef} receiveShadow>
-        <cylinderGeometry args={[1, 1, 0.2, 16]} />
-        <meshStandardMaterial color="#2c3e50" />
-      </mesh>
+      <RigidBody type="fixed" position={[position[0], position[1] + 0.1, position[2]]}>
+        <CylinderCollider args={[0.1, 1]} />
+        <mesh receiveShadow>
+          <cylinderGeometry args={[1, 1, 0.2, 16]} />
+          <meshStandardMaterial color="#2c3e50" />
+        </mesh>
+      </RigidBody>
 
-      {/* Button */}
-      <mesh ref={buttonRef} castShadow receiveShadow>
+      {/* Button Sensor & Animated Visual */}
+      <RigidBody
+        type="fixed"
+        position={[position[0], position[1] + 0.3, position[2]]}
+        sensor
+        onIntersectionEnter={(e) => {
+          if (!isPressed) {
+            setIsPressed(true)
+            openCard(projectData)
+            
+            clearTimeout(pressTimeout.current)
+            pressTimeout.current = setTimeout(() => {
+              setIsPressed(false)
+            }, 3000)
+          }
+        }}
+      >
+        <CylinderCollider args={[0.1, 0.8]} />
+      </RigidBody>
+
+      <mesh ref={buttonMeshRef} position={[position[0], position[1] + 0.3, position[2]]} castShadow receiveShadow>
         <cylinderGeometry args={[0.8, 0.8, 0.2, 16]} />
         <meshToonMaterial color={isPressed ? '#4ba3e3' : color} />
       </mesh>

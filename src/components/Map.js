@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { usePlane, useBox } from '@react-three/cannon'
+import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import House from './House'
 import Grass from './Grass'
 import Road from './Road'
@@ -13,18 +13,13 @@ import { websiteProjects, dataProjects, skills, bossData } from '@/data/projects
  * Map handles the static physical boundaries, the floor, the winding roads, and houses.
  */
 export default function Map() {
-  // 1. The Ground Plane (Physics & Visual)
-  const [floorRef] = usePlane(() => ({
-    type: 'Static',
-    rotation: [-Math.PI / 2, 0, 0],
-    position: [0, 0, 0], // Grass plane at y = 0
-    material: { friction: 0.1 },
-  }))
-
   // 2. Invisible Physics Boundaries (prevent falling off the world)
   const Boundary = ({ position, args }) => {
-    useBox(() => ({ type: 'Static', position, args }))
-    return null
+    return (
+      <RigidBody type="fixed" position={position}>
+        <CuboidCollider args={[args[0] / 2, args[1] / 2, args[2] / 2]} />
+      </RigidBody>
+    )
   }
 
   // 3. The Main Winding Road Spline (Flattened to y = 0.1)
@@ -91,12 +86,14 @@ export default function Map() {
 
   return (
     <group>
-      {/* Visual Floor */}
-      <mesh ref={floorRef} receiveShadow>
-        <planeGeometry args={[200, 200]} />
-        {/* Lush green base */}
-        <meshToonMaterial color="#4ade80" />
-      </mesh>
+      {/* Visual Floor & Physics */}
+      <RigidBody type="fixed" friction={0.1}>
+        <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+          <planeGeometry args={[200, 200]} />
+          {/* Lush green base */}
+          <meshToonMaterial color="#4ade80" />
+        </mesh>
+      </RigidBody>
 
       {/* Physics Boundaries */}
       <Boundary position={[0, 10, -50]} args={[100, 20, 1]} /> // North
