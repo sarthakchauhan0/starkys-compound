@@ -79,7 +79,7 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
       {isTouch && (
         <>
           {/* Left Joystick: Movement */}
-          <div className="absolute bottom-16 left-12 pointer-events-auto">
+          <div className="absolute bottom-8 left-12 pointer-events-auto">
             <Joystick 
               label="Movement" 
               onMove={(x, y) => setMoveJoystick(x, y)} 
@@ -87,7 +87,7 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
           </div>
 
           {/* Right Joystick: Look */}
-          <div className="absolute bottom-16 right-12 pointer-events-auto">
+          <div className="absolute bottom-8 right-12 pointer-events-auto">
             <Joystick 
               label="Look Around" 
               onMove={(x, y) => setLookJoystick(x, y)} 
@@ -95,7 +95,7 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
           </div>
 
           {/* Jump Button (Top right above Look joystick) */}
-          <div className="absolute bottom-56 right-16 pointer-events-auto">
+          <div className="absolute bottom-40 right-16 pointer-events-auto">
             <button 
               className="w-16 h-16 rounded-full glass border border-white/40 flex items-center justify-center active:scale-90 transition-transform shadow-lg"
               onPointerDown={() => setIsJumping(true)}
@@ -110,7 +110,7 @@ export default function HUD({ scannedCount, totalCount, currentZone, isFiring })
 
           {/* Enter House Button (Appears when nearby) */}
           {nearbyHouseData && (
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 pointer-events-auto">
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 pointer-events-auto">
               <button 
                 className="px-8 py-4 rounded-full glass border border-white/60 bg-white/20 flex items-center gap-3 active:scale-95 transition-all shadow-2xl backdrop-blur-xl"
                 onPointerDown={() => openCard(nearbyHouseData)}

@@ -84,9 +84,10 @@ export default function Joystick({ onMove, label }) {
         onPointerCancel={handleEnd}
         style={{ 
           touchAction: 'none',
-          // Responsive size: ~15-18vw but clamped between 80px and 140px
-          width: 'clamp(80px, 18vw, 140px)', 
-          height: 'clamp(80px, 18vw, 140px)'
+          // Use vmin so it scales relative to the shorter screen side (height in landscape)
+          // Clamped between 70px (iPhone portrait width/10) and 120px (iPad comfort)
+          width: 'clamp(70px, 22vmin, 120px)', 
+          height: 'clamp(70px, 22vmin, 120px)'
         }}
       >
         {/* Inner Knob */}

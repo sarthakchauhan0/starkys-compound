@@ -24,7 +24,7 @@ export default function Game() {
   const [started, setStarted] = useState(false)
   
   // Track player position for zone detection (optional but good for future triggers)
-  const playerPos = useRef([0, 2, 15])
+  const playerPos = useRef([0, 2, 0])
 
   const handleEnter = () => {
     setStarted(true)

@@ -58,7 +58,7 @@ export default function Player({ setPlayerPosition }) {
   const [ref, api] = useSphere(() => ({
     mass: 50,
     type: 'Dynamic',
-    position: [0, 5, 15],
+    position: [0, 5, 0],
     args: [0.6], // Slightly larger than before to encompass the cat model
     material: { friction: 0.1, restitution: 0 },
     linearDamping: 0.9,
